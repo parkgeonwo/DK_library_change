@@ -37,6 +37,7 @@ module = Module()       # dk 모듈 불러오기
 
 # cam = Camera(id=0, width=400, height=300)
 
+# 브레드의 예시
 while cam.is_opened():
     img = cam.read()
 
@@ -50,6 +51,9 @@ while cam.is_opened():
     cam.show(img)
 
 cam.release()
+
+
+
 ############################## 변경 전 코드 #############################
 
 import cv2
@@ -92,6 +96,37 @@ while cam.open():                                     # 캠 오픈
     cam.show( img , "cam_name", "quit_string" )       # 보여주기
 
 cam.end()
+
+
+
+
+############################### 2차 변경 ######################################
+
+
+from dynamikontrol import Module, Camera
+
+Camera = Camera.start()           # cam_choice = 0,1 기본값 0 / width 기본값 600 / height 기본값 500
+## setup 수정
+
+while Camera.isOpened():
+    img = Camera.read()        # mirror_mode = 0 or 1 기본값 1 / 기본값 BGR  선택사항 RGB, GRAY, HSV 등등
+    Camera.imshow(img)           #  img / cam_name 기본값 "WebCam" / quit_string 기본값 "q"
+
+
+## 다른사람 라이브러리 많이 참고 해보자 / 메이저한 라이브러리 참고
+## 직관적, 많이사용하는 라이브러리 따라가보기
+## 코드가 사용자들에게 보이기때문에 신경을 쓰자
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -219,6 +254,45 @@ while cam.open():
 
 cam.end()
 
+
+
+
+
+# 컨벤션, 클래스, 첫글자 대문자 , Camera라고 명시
+####################### 2차 변경 ##############################
+
+
+from dynamikontrol import Module, Camera
+
+Camera = Camera.start()           # cam_choice = 0,1 기본값 0 / width 기본값 600 / height 기본값 500
+
+face_detection = Camera.face_detection()        # min_detection_confidence 0.5 기본값 / 
+
+# angle 변수 필요
+# angle의 변수가 왜필요한지 
+# 현재 위치도 모르고 변화하는걸 알려주기위해서
+
+angle = 0 # motor current angle
+
+while Camera.isOpened():
+    img = Camera.read()        # mirror_mode = 0 or 1 기본값 1 / 기본값 BGR  선택사항 RGB, GRAY, HSV 등등
+
+    c_x, c_y, w, h = face_detection.process(img)         # max_num_faces = 1, 2,, 기본값 1 / step_angle = 1, 2,, 기본값 1 
+
+    # face_detection , img 에 들어가는게 이상하다. 따로 모듈을 만들어주던가 camera와 연결
+    # 계산최대한 적게
+    # 동사 + 명사 형식으로 바꾸기 / 복수 까지 고려해야한다. / detect_faces
+    # face 여러개 하는거도 고려해야한다.
+
+    if c_x < 0.4:
+        module.motor.angle(  )         # 여길 어떻게할까??????????
+    elif c_x > 0.6:
+        module.motor.angle(  ) 
+
+    Camera.imshow(img)           #  img / cam_name 기본값 "WebCam" / quit_string 기본값 "q"
+
+# opencv 변수나 함수와도 맞춰보기
+# 교과서 만들기
 
 
 

@@ -78,8 +78,13 @@
 
 
 
+from dynamikontrol import Module
 
+module = Module()
 
+module.motor.angle(0)
+
+module.disconnect()
 
 
 

@@ -8,6 +8,9 @@ mp_drawing_styles = mp.solutions.drawing_styles
 mp_face_mesh = mp.solutions.face_mesh
 
 module = Module()
+module_spin = Module(serial_no='AC000095')
+module_push = Module(serial_no='AC000023')
+
 
 # 웹캠, 영상 파일의 경우 이것을 사용하세요.:
 drawing_spec = mp_drawing.DrawingSpec(thickness=1, circle_radius=1)
