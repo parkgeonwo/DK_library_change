@@ -1,17 +1,21 @@
-from dynamikontrol import Module
+from dynamikontrol import Module, Timer
 import cv2
 import mediapipe as mp
 import time
 
-module = Module()
+# module = Module()
+module_spin = Module(serial_no='AC000095')
+module_push = Module(serial_no='AC000023')
+t1 = Timer()
 
 mp_drawing = mp.solutions.drawing_utils
 mp_drawing_styles = mp.solutions.drawing_styles
 mp_face_mesh = mp.solutions.face_mesh
 
-module.motor.angle(-85)
+module_spin.motor.angle(-85)
 current_angle = -51
 
+module_push.motor.angle(-85)
 
 # For webcam input:
 drawing_spec = mp_drawing.DrawingSpec(thickness=1, circle_radius=1)
@@ -68,9 +72,14 @@ with mp_face_mesh.FaceMesh(
         # print(gap)
         
         if gap >= 200:
-            module.motor.angle(current_angle, period=1)
+            module_spin.motor.angle(current_angle, period=1)
             current_angle += 34
+
+            t1.callback_after(func=module_push.motor.angle, args=(85,), after=2, interval=0.1)
+            t1.callback_after(func=module_push.motor.angle, args=(-85,), after=3, interval=0.1)
             time.sleep(5)
+
+
 
     # Flip the image horizontally for a selfie-view display.
     cv2.imshow('MediaPipe Face Mesh', cv2.flip(image, 1))
