@@ -76,7 +76,7 @@ with mp_face_mesh.FaceMesh(
             current_angle += 34
 
             t1.callback_after(func=module_push.motor.angle, args=(85,), after=2, interval=0.1)    # 2초있다가
-            t1.callback_after(func=module_push.motor.angle, args=(-85,), after=3, interval=0.1)
+            t1.callback_after(func=module_push.motor.angle, args=(-85,), after=3, interval=0.1)   # 3초
             time.sleep(5) 
 
 
