@@ -1,21 +1,16 @@
-from dynamikontrol import Module, Timer
 import cv2
 import mediapipe as mp
 import time
 
-# module = Module()
-module_spin = Module(serial_no='AC000095')
-module_push = Module(serial_no='AC000023')
-t1 = Timer()
+from dynamikontrol import Module
+module_spin = Module()
+
+module_spin.motor.angle(-85)
+current_angle = -17
 
 mp_drawing = mp.solutions.drawing_utils
 mp_drawing_styles = mp.solutions.drawing_styles
 mp_face_mesh = mp.solutions.face_mesh
-
-module_spin.motor.angle(-85)
-current_angle = -51
-
-module_push.motor.angle(-85)
 
 # For webcam input:
 drawing_spec = mp_drawing.DrawingSpec(thickness=1, circle_radius=1)
@@ -71,13 +66,12 @@ with mp_face_mesh.FaceMesh(
         gap = int(abs(lip_lower - lip_upper) * 1500)
         # print(gap)
         
-        if gap >= 200:
+        if gap >= 180:
             module_spin.motor.angle(current_angle, period=1)
-            current_angle += 34
+            current_angle += 68
+            print(current_angle)
 
-            t1.callback_after(func=module_push.motor.angle, args=(85,), after=2)    # 2초있다가
-            t1.callback_after(func=module_push.motor.angle, args=(-85,), after=3)   # 3초
-            time.sleep(6) 
+            time.sleep(5) 
 
 
 

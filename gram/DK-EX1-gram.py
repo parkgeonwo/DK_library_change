@@ -3,11 +3,11 @@ import time
 
 t1 = Timer()
 
-module = Module()
+module_push = Module(serial_no='AC000023')
 
-module.motor.angle(-45)
-t1.callback_after(func=module.motor.angle, args=(45,), after=2, interval=0.1)
-
+module_push.motor.angle(-75)
+t1.callback_after(func=module_push.motor.angle, args=(75,), after=3)
+t1.callback_after(func=module_push.motor.angle, args=(-45,), after=5)
 
 
 
