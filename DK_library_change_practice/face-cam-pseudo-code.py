@@ -277,7 +277,8 @@ angle = 0 # motor current angle
 while Camera.isOpened():
     img = Camera.read()        # mirror_mode = 0 or 1 기본값 1 / 기본값 BGR  선택사항 RGB, GRAY, HSV 등등
 
-    c_x, c_y, w, h = face_detection.process(img)         # max_num_faces = 1, 2,, 기본값 1 / step_angle = 1, 2,, 기본값 1 
+    c_x, c_y, w, h = face_detection.process(img)         # max_num_faces = 1, 2,, 기본값 1 / step_angle = 1, 2,, 기본값 1
+     
 
     # face_detection , img 에 들어가는게 이상하다. 따로 모듈을 만들어주던가 camera와 연결
     # 계산최대한 적게
@@ -295,6 +296,64 @@ while Camera.isOpened():
 # 교과서 만들기
 
 
+
+
+######################## 최종 ###########################
+
+
+from dynamikontrol import Module, Camera
+
+camera = Camera.start()           # cam_choice = 0,1 기본값 0 / width 기본값 600 / height 기본값 500
+## setup 수정
+
+while camera.is_opened():
+    img = camera.read()        # mirror_mode = 0 or 1 기본값 1 / 기본값 BGR  선택사항 RGB, GRAY, HSV 등등
+    camera.show(img)           #  img / cam_name 기본값 "WebCam" / #이름 수정 #quit_string 기본값 q --> esc
+
+
+## 다른사람 라이브러리 많이 참고 해보자 / 메이저한 라이브러리 참고
+## 직관적, 많이사용하는 라이브러리 따라가보기
+## 코드가 사용자들에게 보이기때문에 신경을 쓰자
+
+
+#####################################################
+
+
+from dynamikontrol import Module, Camera
+
+camera = Camera.start()           # cam_choice = 0,1 기본값 0 / width 기본값 최대값 / height 기본값 최대값 / 동영상 추가
+                                    # 변수명
+# faces_detection = Camera.faces_detection()        # min_detection_confidence 0.5 기본값 / 
+
+# angle 변수 필요
+# angle의 변수가 왜필요한지 
+# 현재 위치도 모르고 변화하는걸 알려주기위해서
+# 동영상이 들어갈수도있다.
+
+angle = 0 # motor current angle
+
+
+while camera.is_opened():
+    img = camera.read()        # mirror_mode = 0 or 1 기본값 1 /# 굳이,, 기본값 BGR  선택사항 RGB, GRAY, HSV 등등
+    
+    c_x, c_y, w, h = camera.detect_faces(img,1)         # img / max_num_faces = 1, 2,, 기본값 1 / 
+    # 옵션 추가 : box 안그리게 / 그리게 , 
+
+    # face_detection , img 에 들어가는게 이상하다. 따로 모듈을 만들어주던가 camera와 연결
+    # 계산최대한 적게
+    # 동사 + 명사 형식으로 바꾸기 / 복수 까지 고려해야한다. / detect_faces
+    # face 여러개 하는거도 고려해야한다.
+
+    if c_x < 0.4:
+        angle += 1
+        module.motor.angle( angle ) 
+    elif c_x > 0.6:
+        angle -= 1
+        module.motor.angle( angle ) 
+
+    Camera.show(img)           #  img / cam_name 기본값 "WebCam" / quit_string 기본값 "esc"
+
+# 교과서 만들기
 
 
 
