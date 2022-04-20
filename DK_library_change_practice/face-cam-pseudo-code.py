@@ -303,12 +303,12 @@ while Camera.isOpened():
 
 from dynamikontrol import Module, Camera
 
-camera = Camera.start()           # cam_choice = 0,1 기본값 0 / width 기본값 600 / height 기본값 500
+camera = Camera.start()           # cam_index = 0,1 기본값 0 / width 화면 최대 / height 화면 최대
 ## setup 수정
 
 while camera.is_opened():
-    img = camera.read()        # mirror_mode = 0 or 1 기본값 1 / 기본값 BGR  선택사항 RGB, GRAY, HSV 등등
-    camera.show(img)           #  img / cam_name 기본값 "WebCam" / #이름 수정 #quit_string 기본값 q --> esc
+    img = camera.read()        # mirror_mode = 1 기본값 1 
+    camera.show(img)           #  img / cam_name 기본값 "WebCam" / #cam_cancel_key 기본값 "esc"
 
 
 ## 다른사람 라이브러리 많이 참고 해보자 / 메이저한 라이브러리 참고
@@ -321,8 +321,9 @@ while camera.is_opened():
 
 from dynamikontrol import Module, Camera
 
-camera = Camera.start()           # cam_choice = 0,1 기본값 0 / width 기본값 최대값 / height 기본값 최대값 / 동영상 추가
+camera = Camera.start()           # cam_index = 0,1 기본값 0 / width 기본값 최대값 / height 기본값 최대값 / 동영상 추가
                                     # 변수명
+
 # faces_detection = Camera.faces_detection()        # min_detection_confidence 0.5 기본값 / 
 
 # angle 변수 필요
@@ -356,7 +357,38 @@ while camera.is_opened():
 # 교과서 만들기
 
 
+###############################################
+
+from dynamikontrol import Module, Camera
+
+camera = Camera.start()           # cam_num = 0,1 기본값 0 / width 화면 최대 / height 화면 최대
+
+while camera.is_opened():
+    img = camera.read()        # mirror_mode = 1 기본값 1 
+    camera.show(img)           #  img / cam_name 기본값 "WebCam" / #cam_cancel_key 기본값 "esc"
 
 
+#######################################
+from dynamikontrol import Module, Camera
+
+camera = Camera.start()           # cam_num = 0,1 기본값 0 / width 기본값 최대값 / height 기본값 최대값 / 동영상 추가
+
+angle = 0 # motor current angle
+
+while camera.is_opened():
+    img = camera.read()        # mirror_mode = 0 or 1 기본값 1 /# 굳이,, 기본값 BGR  선택사항 RGB, GRAY, HSV 등등
+    
+    c_x, c_y, w, h = camera.detect_faces(img)         # img / max_num_faces = 1, 2,, 기본값 1 / draw_boxes = 0 or 1 기본값 1
+
+    if c_x < 0.4:
+        angle += 1
+        module.motor.angle( angle ) 
+    elif c_x > 0.6:
+        angle -= 1
+        module.motor.angle( angle ) 
+
+    Camera.show(img)           #  img / cam_name 기본값 "WebCam" / #cam_cancel_key 기본값 "esc"
+
+# 교과서 만들기
 
 
