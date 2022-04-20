@@ -59,29 +59,38 @@ class Camera():
         return self.camera.isOpened()
 
     def read(self, mirror_mode = 1):
-
+        
         ret, img = self.camera.read()
-        if not ret:
-            break
 
         img = cv2.flip(img,mirror_mode)    # mirror_mode = 1
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)    # BGR to RGB
 
-        return img 
+        return img, ret
+
+    # def show(self, img, cam_name = "Web Cam"):
+
+    #     cv2.imshow(cam_name, img)
+    #     if cv2.waitKey(1) & oxFF == 27:   # cancel_key : esc
+    #         break
 
 
+# 변수 받기 흐르기
+# set / get 해보고
+# 흐르게 
 
+ 
 camera = Camera()
 
 while camera.is_opened():
-    img = camera.read()
+    img, ret = camera.read()
+    if not ret:
+        break   
 
     cv2.imshow('title', img)     # img를 실시간으로 출력 / 제목은 "arg"
-    if cv2.waitKey(1) == ord('q'):
+    if cv2.waitKey(1) & 0xFF == 27:
         break
 
 
-
-# 토큰 : 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
 
 
 

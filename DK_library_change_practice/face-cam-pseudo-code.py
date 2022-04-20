@@ -73,7 +73,7 @@ while cap.isOpened():
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
     cv2.imshow('title', img)     # img를 실시간으로 출력 / 제목은 "arg"
-    if cv2.waitKey(1) == ord('q'):
+    if cv2.waitKey(1) & 0xFF == 27:
         break
 
 # 캠 끄기 cam.end()
@@ -303,8 +303,7 @@ while Camera.isOpened():
 
 from dynamikontrol import Module, Camera
 
-camera = Camera.start()           # cam_index = 0,1 기본값 0 / width 화면 최대 / height 화면 최대
-## setup 수정
+camera = Camera()           # cam_index = 0,1 기본값 0 / width 화면 최대 / height 화면 최대
 
 while camera.is_opened():
     img = camera.read()        # mirror_mode = 1 기본값 1 
@@ -335,7 +334,7 @@ angle = 0 # motor current angle
 
 
 while camera.is_opened():
-    img = camera.read()        # mirror_mode = 0 or 1 기본값 1 /# 굳이,, 기본값 BGR  선택사항 RGB, GRAY, HSV 등등
+    img = camera.read()        # mirror_mode = 0 or 1 기본값 1 /
     
     c_x, c_y, w, h = camera.detect_faces(img,1)         # img / max_num_faces = 1, 2,, 기본값 1 / 
     # 옵션 추가 : box 안그리게 / 그리게 , 
