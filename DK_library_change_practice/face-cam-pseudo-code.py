@@ -336,7 +336,7 @@ angle = 0 # motor current angle
 while camera.is_opened():
     img = camera.read()        # mirror_mode = 0 or 1 기본값 1 /# 굳이,, 기본값 BGR  선택사항 RGB, GRAY, HSV 등등
     
-    c_x, c_y, w, h = camera.detect_faces(img,1)         # img / max_num_faces = 1, 2,, 기본값 1 / 
+    c_x, c_y, w, h = camera.detect_faces(img,1)         # img / max_num_faces = 1, 2,, 기본값 1 / bounding_box 0 or 1 
     # 옵션 추가 : box 안그리게 / 그리게 , 
 
     # face_detection , img 에 들어가는게 이상하다. 따로 모듈을 만들어주던가 camera와 연결
