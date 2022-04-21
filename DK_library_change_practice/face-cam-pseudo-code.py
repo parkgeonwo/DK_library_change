@@ -63,9 +63,9 @@ cap = cv2.VideoCapture(0)    # 웹캠 키기
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, 300)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 400)
 
-while cap.isOpened():
-    ret, img = cap.read()
-    if not ret:
+while cap.isOpened():   # 영상이나 웹캠이 올바로 열렸는지?
+    ret, img = cap.read()       # ret : 성공 여부, img : 받아온 이미지(프레임)
+    if not ret:                 # 더이상 가져올 프레임이 없다면 
         break
 
     img = cv2.flip(img, 1) # mirror image
@@ -370,7 +370,7 @@ while camera.is_opened():
 #######################################
 from dynamikontrol import Module, Camera
 
-camera = Camera.start()           # cam_num = 0,1 기본값 0 / width 기본값 최대값 / height 기본값 최대값 / 동영상 추가
+camera = Camera()           # cam_num = 0,1 기본값 0 / width 기본값 최대값 / height 기본값 최대값 / 동영상 추가
 
 angle = 0 # motor current angle
 
