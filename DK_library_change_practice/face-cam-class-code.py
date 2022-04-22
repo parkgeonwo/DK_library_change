@@ -134,7 +134,7 @@ class Camera():
 
         r = []    # return 할 list
 
-        if results.detections:
+        if results.detections: 
             for detection in results.detections:
                 # self.mp_drawing.draw_detection(frame, detection)
 
