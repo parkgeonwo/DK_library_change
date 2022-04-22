@@ -1,6 +1,6 @@
 import cv2
 import mediapipe as mp
-
+  
 class Face():
     def __init__(self, x1, y1, w, h):
         self.x1 = x1
