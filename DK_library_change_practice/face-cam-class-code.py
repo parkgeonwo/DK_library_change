@@ -47,38 +47,28 @@ class Face():
         self.w = w
         self.h = h
 
-    def find_coordinate(self, c_x, c_y, w, h):
-
-        list = []
-        self.c_x = c_x
-        self.c_y = c_y
-        self.w = w
-        self.h = h
-        list = [ self.c_x, self.c_y, self.w, self.h ]
-
-        return list
-
 class Camera():
 
     def __init__(self, cam_num = 0, width = 640, height = 480 ):
-        
+        ### TODO : width, height None 으로 기본셋팅 / 입력하면 바뀌게
+        ### opencv에서 카메라 해상도 받아오기 사용해서 self.width none 안나오게
+
         self.cam_num = cam_num
         self.width = width
         self.height = height
 
         self.camera = cv2.VideoCapture(cam_num)    # web cam start
 
-        self.camera.set(3, self.width)    # web cam width control
-        self.camera.set(4, self.height)   # web cam height control
-
-        ### mideapipe drawing
-        self.mp_drawing = mp.solutions.drawing_utils             # mediapipe drawing
+        ### TODO : cv2.prop~~ 로 바꾸기
+        # self.camera.set(3, self.width)    # web cam width control
+        # self.camera.set(4, self.height)   # web cam height control
 
         ### mediapipe face_detection
         self.mp_face_detection = mp.solutions.face_detection   
         self.face_detection = self.mp_face_detection.FaceDetection(min_detection_confidence=0.5)
         
     def is_opened(self, cancel_key = 27):
+        ### TODO : cancelkey 이름 바꾸기
         if not self.camera.isOpened():  # self.camera.isOpened가 False 라면
             return False
 
@@ -99,24 +89,50 @@ class Camera():
         return True
 
     def get_frame(self, mirror_mode = 1):
+        ### TODO : True / False
+        # True false를 검사해서 함수 안쓰게 / 연산시간 감축
         self.frame = cv2.flip(self.frame, mirror_mode)
 
         return self.frame
 
-    def show(self, frame, cam_name = "Web Cam"):
+    def show(self, frame, cam_name = "Web Cam"):    # TODO : window_name
         return cv2.imshow(cam_name, frame)
 
+    def draw_face(self, r):       # face 한개 그리는 method
+        r = r[ self.temp_list.index( max(self.temp_list) ) ]      # h가 가장 큰 한개의 좌표만 r로 할당
+        face_x1 = r[0] - (1/2) * r[2]
+        face_y1 = r[1] + (1/2) * r[3]
+        face_x2 = r[0] + (1/2) * r[2]
+        face_y2 = r[1] - (1/2) * r[3]
+        cv2.rectangle(frame, (int(round(self.width*face_x1)), int(round(self.height*face_y1))),
+                (int(round(self.width*face_x2)),int(round(self.height*face_y2))),
+                (0,255,0), 3)     # face 그리기
 
-    def detect_face(self, frame):
-        # TODO : 제일 큰 얼굴 1개만 반환
-        return self.detect_faces(frame, max_num_faces=1)
+    def draw_faces(self,r,num_faces):   # face 여러개 그려주는 method
+        self.temp_list2 = sorted(self.temp_list, reverse=True)
+        self.face_list = []
 
-    def detect_faces(self, frame, max_num_faces=None):     # max_num_faces = 1 , draw_boxes = 1
-        results = self.face_detection.process(frame)       
-        
+        for i in range(num_faces):
+            self.face_list.append( r[ self.temp_list.index( self.temp_list2[i]) ] )
+
+            face_x1 = self.face_list[i][0] - (1/2) * self.face_list[i][2]
+            face_y1 = self.face_list[i][1] + (1/2) * self.face_list[i][3]
+            face_x2 = self.face_list[i][0] + (1/2) * self.face_list[i][2]
+            face_y2 = self.face_list[i][1] - (1/2) * self.face_list[i][3]
+            cv2.rectangle(frame, (int(round(self.width*face_x1)), int(round(self.height*face_y1))),
+                    (int(round(self.width*face_x2)),int(round(self.height*face_y2))),
+                    (0,255,0), 3)     # face 그리기
+
+    def detect_face(self, frame, draw_box = 1):      # 얼굴한개 찾기
+        draw_box_num = draw_box
+        return self.detect_faces(frame, max_num_faces = 1, draw_boxes = draw_box_num )
+
+    def detect_faces(self, frame, max_num_faces = 3, draw_boxes = 1): # max_num = mediapipe 기본값과 같게 / draw_boxes = 1
+        results = self.face_detection.process(frame) 
+
         # TODO : max_num_faces 만큼 큰 얼굴만 검출
 
-        r = []
+        r = []    # return 할 list
 
         if results.detections:
             for detection in results.detections:
@@ -138,57 +154,42 @@ class Camera():
 
                 r.append( [face.c_x, face.c_y, face.w, face.h] )
 
-                # h가 가장 큰 한개의 좌표만 r에 할당
-                if max_num_faces == 1:             
-                    temp_list = []
-                    for i in range(len(r)):   # len(r) = 탐지된 얼굴 수
-                        temp_list.append(r[i][3])       # temp_list에 탐지된 얼굴들의 h값 추가
-                        r = r[temp_list.index(max(temp_list))]    # 탐지된 얼굴들의 h 값중 가장 큰 h를 list에서 index 하여 r에서 index num 해당 부분만 r로 할당
-                        face_x1 = r[0] - (1/2) * r[2]
-                        face_y1 = r[1] + (1/2) * r[3]
-                        face_x2 = r[0] + (1/2) * r[2]
-                        face_y2 = r[1] - (1/2) * r[3]
 
-                        cv2.rectangle(frame, (int(round(self.width*face_x1)), int(round(self.height*face_y1))),
-                                             (int(round(self.width*face_x2)),int(round(self.height*face_y2))),
-                                             (0,255,0), 3)     # 제일큰 face 하나에만 그리기
+        self.temp_list = []     # h의 크기를 비교하기위한 리스트
+        self.temp_list2 = []    # face 여러개 있을때 h의 크기를 sort하기 위한 리스트
 
-                    # face2 = Face(r[0], r[1], r[2], r[3])
-                    # face2 = face2.find_coordinate( r[0], r[1], r[2], r[3] )
-                    # return face2
+        if len(r) == 1:     # 얼굴이 한개 detect 됐을때
+            self.temp_list.append(r[0][3])
+            ### TODO : IF / ELIF 합치기
+            if max_num_faces == 1 and draw_boxes == 1:    # 한개만 detect 할때는
+                self.draw_face(r)     # h가 가장 큰 얼굴에 rectangle 그리기
+            elif max_num_faces >= 2 and draw_boxes == 1:   # max_num_faces가 2이상이라도
+                self.draw_face(r)      # 한개만 detect 될때 그려주기
 
-                elif max_num_faces > 1:
-                    temp_list = []
-                    for i in range(len(r)):      # len(r) = 탐지된 얼굴 수
-                        temp_list.append(r[i][3])      # temp_list에 탐지된 얼굴들의 h값 추가
-                        temp_list2 = sorted(temp_list, reverse = True)               # temp_list를 정렬하여 temp_list2에 할당
-                        for i in range(max_num_faces):  # 얼굴 탐지수만큼 반복
-                            if len(temp_list) == 1:
-                                r = r[ temp_list.index( temp_list2[0] ) ]
-                                print(r)
-                                # face_x1 = r[0] - (1/2) * r[2]
-                                # face_y1 = r[1] + (1/2) * r[3]
-                                # face_x2 = r[0] + (1/2) * r[2]
-                                # face_y2 = r[1] - (1/2) * r[3]
+        for i in range(2,6):    # 얼굴 2~5개까지 가능
+            if len(r) == i:     # 얼굴이 두개 detect 됐을때
+                for j in range(i):
+                    self.temp_list.append(r[j][3])
 
-                                # cv2.rectangle(frame, (int(round(self.width*face_x1)), int(round(self.height*face_y1))),
-                                #                     (int(round(self.width*face_x2)),int(round(self.height*face_y2))),
-                                #                     (0,255,0), 3)     # i번째 face 그리기
+                if max_num_faces == 1 and draw_boxes == 1 :    # 한개만 detect 할때는
+                    self.draw_face(r)     # h가 가장 큰 얼굴에 rectangle 그리기
+                
+                elif max_num_faces >= 2 and draw_boxes == 1:                  # 여러개 detect할때는
+                    self.draw_faces(r,num_faces = i)    # 큰 얼굴 순서대로 max_num_faces 만큼 rectangle그리기
 
-                            else:
-                                r = r[ temp_list.index( temp_list2[i] ) ]    # temp_list2[i] = h값중 1번째 큰값, 2번째 큰값,,,max_num번째 큰값
-                            
-                                face_x1 = r[0] - (1/2) * r[2]
-                                face_y1 = r[1] + (1/2) * r[3]
-                                face_x2 = r[0] + (1/2) * r[2]
-                                face_y2 = r[1] - (1/2) * r[3]
 
-                                cv2.rectangle(frame, (int(round(self.width*face_x1)), int(round(self.height*face_y1))),
-                                                    (int(round(self.width*face_x2)),int(round(self.height*face_y2))),
-                                                    (0,255,0), 3)     # i번째 face 그리기
+        if max_num_faces == 1 and len(r) == 1:     # max_num_faces가 1이고 얼굴이 한개 detect됐을때,
+            return face
 
-                        
-        return r # [Face(), Face()]
+        elif max_num_faces == 1 and len(r) == 0:   # max_num_faces가 1이고 얼굴이 detect안됐을때,
+            face2 = Face(0.5, 0.5, 0, 0)        # c_x, c_y = 0.5 , w, h = 0
+            return face2    # face가 감지안되도 face가 1개가 리턴이 된다. 
+
+        elif max_num_faces == 1 and len(r) >= 2:   # max_num_faces가 1이고 얼굴이 2개이상 detect 됐을때,
+            face3 = Face(0.5, 0.5, 0, 0)        # c_x, c_y = 0.5 , w, h = 0
+            return face3    # face 
+        else:
+            return r 
 
 
 
@@ -197,116 +198,48 @@ class Camera():
 
 ###################################### 
 
-# 문제점 1 : break를 클래스안에 넣어줄수가 없음.
-## 클래스를 고쳐서 해결했음 
 
-
-# camera = Camera()
-
-# while camera.is_opened():         # cancel_key 기본 esc 
-#     frame = camera.get_frame()    # mirror_mode 기본 1
-#     camera.show(frame)
-
-
-######################################
-
-from dynamikontrol import Module
-
-module = Module()
 camera = Camera()
 
-angle = 0
-
-while camera.is_opened():
-    frame = camera.get_frame() 
-
-    # face = camera.detect_face(frame)
-
-    faces = camera.detect_faces(frame,max_num_faces = 2)
-    # print(face.c_x)
-
-
-
-
-    # for face in faces:
-    #     print(face.cx, face.cy, face.w, face.h)
-    # print(cx, cy, width, height)
-    
-    # if face.cx < 0.4:
-    #     angle += 1
-    #     module.motor.angle(angle, period = 0.1)
-    # elif face.cx > 0.6:
-    #     angle -= 1
-    #     module.motor.angle(angle, period = 0.1)
-
-    cv2.putText(frame, '%d deg' % (angle), org=(10, 30), fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=255, thickness=2)
-    camera.show(frame)
-
-
-
-
-
-
-
-
-
-
+while camera.is_opened():         # cancel_key 기본 esc 
+    frame = camera.get_frame()    # mirror_mode 기본 1
+    camera.show(frame)            # cam_name 기본 Web Cam
 
 
 ######################################
-
-
 
 # from dynamikontrol import Module
 
 # module = Module()
-# camera = Camera()           
+# camera = Camera()
 
-# while camera.is_opened():
-#     frame, img = camera.read()
-#     if not frame:
-#         break   
+# angle = 0
 
-#     cx, cy, w, h = camera.detect_faces(img)         
-#     # print(cx, cy, width, height)
+# while camera.is_opened():               # cancel_key 기본 esc 
+#     frame = camera.get_frame()          # mirror_mode 기본 1
 
-#     angle = round( -170*cx +85 )
-#     module.motor.angle(angle)
+#     #face = camera.detect_face(frame)     # draw_box 기본 1
+#     faces = camera.detect_faces(frame, draw_boxes=1)  # max_num_faces 기본 3 / draw_boxes 기본 1 
+#     #print(face.c_x)
+#     print(faces)
+#     # if face.c_x < 0.4:
+#     #     angle += 3
+#     #     module.motor.angle(angle)
+#     # elif face.c_x > 0.6:
+#     #     angle -= 3
+#     #     module.motor.angle(angle)
 
-#     camera.show(img)
-
-#     if camera.cancel():
-#         break
+#     camera.show(frame)        # cam_name 기본 Web Cam
 
 
 
-######################################
-# 이렇게 하면 되긴함.
 
-# from dynamikontrol import Module
 
-# camera = Camera()   
-# module = Module()         
 
-# while camera.is_opened():
-#     frame, img = camera.read()
-#     if not frame:
-#         break   
 
-#     try:
-#         cx, cy, w, h = camera.detect_faces(img)         
-#         angle = round( -170*cx +85 )
-#         module.motor.angle(angle)
 
-#     except:
-#         pass
 
-#     camera.show(img)
 
-#     if camera.cancel():
-#         break
-
-#######################################
 
 
 
