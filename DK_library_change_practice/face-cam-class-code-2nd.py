@@ -14,8 +14,9 @@ class Face():
         self.c_x = (self.x1 + self.x2) / 2
         self.c_y = (self.y1 + self.y2) / 2
 
-    def __repr__(self):   # Face() 객체의 인자를 보기좋게 만들 수 있음.
+    def __repr__(self):   # Face() 객체의 인자를 보기좋게 만듬.
         return 'x1: %.2f, y1: %.2f, width: %.2f, height: %.2f' % (self.c_x, self.c_y, self.width, self.height)
+
 
 
 
@@ -85,7 +86,7 @@ class Camera():
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         results = self.face_detection.process(frame_rgb)
 
-        faces = []    # return 할 list
+        self.faces = []    # return 할 list
 
         if results.detections:
             for detection in results.detections:
@@ -95,17 +96,17 @@ class Camera():
                 x1 = detection.location_data.relative_bounding_box.xmin # left
                 y1 = detection.location_data.relative_bounding_box.ymin # top
 
-                faces.append( Face(x1, y1, w, h) )
+                self.faces.append( Face(x1, y1, w, h) )
 
-        faces = sorted(faces, key=lambda face: face.height, reverse=True)  # faces에서 face를 정렬할건데 기준은 face.height이다.
-        faces = faces[:max_num_faces]    # 정렬된 faces에 max_num_faces 만큼만 할당
+        self.faces = sorted(self.faces, key=lambda face: face.height, reverse=True)  # faces에서 face를 정렬할건데 기준은 face.height이다.
+        self.faces = self.faces[:max_num_faces]    # 정렬된 faces에 max_num_faces 만큼만 할당
 
         if draw_boxes:
-            self.draw_faces(faces)
+            self.draw_faces(self.faces)
         else:
             pass
 
-        return faces
+        return self.faces
 
 
 
@@ -123,25 +124,28 @@ class Camera():
 
 ######################################
 
-# from dynamikontrol import Module
+from dynamikontrol import Module
 
-# module = Module()
-# camera = Camera(cam_num='/home/matrix/Desktop/code/video2.mp4')
+module = Module()
+camera = Camera(cam_num='/home/matrix/Desktop/code/video2.mp4')
 camera = Camera()
 
-# angle = 0
+angle = 0
 
 while camera.is_opened():               # cancel_key default esc 
     frame = camera.get_frame()          # mirror_mode default True
 
     face = camera.detect_face(frame)     # draw_box default True
-    
-    # if face.c_x < 0.4:
-    #     angle += 3
-    #     module.motor.angle(angle)
-    # elif face.c_x > 0.6:
-    #     angle -= 3
-    #     module.motor.angle(angle)
+
+    if len(face) == 1:          # face가 1개 detect 되면
+        c_x = face[0].c_x
+
+    if c_x < 0.4:
+        angle += 3
+        module.motor.angle(angle)
+    elif c_x > 0.6:
+        angle -= 3
+        module.motor.angle(angle)
 
     camera.show(frame)        # cam_name default "Web Cam"
 
@@ -162,14 +166,10 @@ while camera.is_opened():               # cancel_key default esc
 #     frame = camera.get_frame()          # mirror_mode default True
 
 #     faces = camera.detect_faces(frame)
-#     print(faces)
-    
-#     if face.c_x < 0.4:
-#         angle += 3
-#         module.motor.angle(angle)
-#     elif face.c_x > 0.6:
-#         angle -= 3
-#         module.motor.angle(angle)
+#     if len(faces) == 1:              # face가 1개 detect 되면
+#         print(faces[0].c_x)
+#     elif len(faces) == 2:            # face가 2개 detect 되면
+#         print(faces[0].c_x, faces[1].c_x)
 
 #     camera.show(frame)        # cam_name default "Web Cam"
 
