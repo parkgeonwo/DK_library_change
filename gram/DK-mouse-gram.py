@@ -3,19 +3,19 @@ import cv2
 import mediapipe as mp
 import time
 
-module = Module()
+# module = Module()
 
 mp_drawing = mp.solutions.drawing_utils
 mp_drawing_styles = mp.solutions.drawing_styles
 mp_face_mesh = mp.solutions.face_mesh
 
-module.motor.angle(-85)
-current_angle = -51
+# module.motor.angle(-85)
+# current_angle = -51
 
 
 # For webcam input:
 drawing_spec = mp_drawing.DrawingSpec(thickness=1, circle_radius=1)
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture('/home/matrix/Desktop/code/video2.mp4')
 with mp_face_mesh.FaceMesh(
     max_num_faces=1,
     refine_landmarks=True,
@@ -67,10 +67,10 @@ with mp_face_mesh.FaceMesh(
         gap = int(abs(lip_lower - lip_upper) * 1500)
         # print(gap)
         
-        if gap >= 200:
-            module.motor.angle(current_angle, period=1)
-            current_angle += 34
-            time.sleep(5)
+        # if gap >= 200:
+        #     module.motor.angle(current_angle, period=1)
+        #     current_angle += 34
+        #     time.sleep(5)
 
     # Flip the image horizontally for a selfie-view display.
     cv2.imshow('MediaPipe Face Mesh', cv2.flip(image, 1))
