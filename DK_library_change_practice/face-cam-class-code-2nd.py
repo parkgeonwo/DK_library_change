@@ -115,10 +115,10 @@ class Camera():
     #     return faces
 
 
-    def detect_face(self, frame, draw_mesh = True):      # 얼굴한개 찾기
-        return self.detect_faces(frame, max_num_faces = 1, draw_mesh = draw_mesh )
+    def detect_face(self, frame, draw_face_box = True):      # 얼굴한개 찾기
+        return self.detect_faces(frame, max_num_faces = 1, draw_mesh = draw_face_box )
 
-    def detect_faces(self, frame, max_num_faces = 99, draw_mesh = True, draw_boxes =True):
+    def detect_faces(self, frame, max_num_faces = 99, draw_mesh = True, draw_face_boxes =True):
         mp_face_mesh = mp.solutions.face_mesh
         face_mesh = mp_face_mesh.FaceMesh(
             max_num_faces = max_num_faces,    # detect face mesh number
@@ -171,17 +171,15 @@ class Camera():
                 face_upper = face_landmarks.landmark[10].y
                 face_lower = face_landmarks.landmark[152].y
 
-
                 face_width = face_right - face_left
                 face_height = - ( face_upper - face_lower )
 
                 faces.append( Face(x1=face_left, y1=face_upper, width=face_width, height=face_height) )
 
-
         faces = sorted(faces, key=lambda face: face.height, reverse=True)  # faces에서 face를 정렬할건데 기준은 face.height이다.
         faces = faces[:max_num_faces]    # 정렬된 faces에 max_num_faces 만큼만 할당
 
-        if draw_boxes:
+        if draw_face_boxes:
             self.draw_faces(faces)
         else:
             pass
@@ -189,11 +187,6 @@ class Camera():
 
         return faces
 
-
-# class Temp():
-#     def __init__(self, faces):
-#         if len(faces) >= 1:
-#             self.main_face_center_x = faces[0].c_x
 
 
 
