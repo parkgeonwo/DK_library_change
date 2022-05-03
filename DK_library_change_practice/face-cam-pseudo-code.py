@@ -63,9 +63,9 @@ cap = cv2.VideoCapture(0)    # 웹캠 키기
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, 300)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 400)
 
-while cap.isOpened():
-    ret, img = cap.read()
-    if not ret:
+while cap.isOpened():   # 영상이나 웹캠이 올바로 열렸는지?
+    ret, img = cap.read()       # ret : 성공 여부, img : 받아온 이미지(프레임)
+    if not ret:                 # 더이상 가져올 프레임이 없다면 
         break
 
     img = cv2.flip(img, 1) # mirror image
@@ -73,7 +73,7 @@ while cap.isOpened():
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
     cv2.imshow('title', img)     # img를 실시간으로 출력 / 제목은 "arg"
-    if cv2.waitKey(1) == ord('q'):
+    if cv2.waitKey(1) & 0xFF == 27:
         break
 
 # 캠 끄기 cam.end()
@@ -303,12 +303,11 @@ while Camera.isOpened():
 
 from dynamikontrol import Module, Camera
 
-camera = Camera.start()           # cam_choice = 0,1 기본값 0 / width 기본값 600 / height 기본값 500
-## setup 수정
+camera = Camera()           # cam_index = 0,1 기본값 0 / width 화면 최대 / height 화면 최대
 
 while camera.is_opened():
-    img = camera.read()        # mirror_mode = 0 or 1 기본값 1 / 기본값 BGR  선택사항 RGB, GRAY, HSV 등등
-    camera.show(img)           #  img / cam_name 기본값 "WebCam" / #이름 수정 #quit_string 기본값 q --> esc
+    img = camera.read()        # mirror_mode = 1 기본값 1 
+    camera.show(img)           #  img / cam_name 기본값 "WebCam" / #cam_cancel_key 기본값 "esc"
 
 
 ## 다른사람 라이브러리 많이 참고 해보자 / 메이저한 라이브러리 참고
@@ -321,8 +320,9 @@ while camera.is_opened():
 
 from dynamikontrol import Module, Camera
 
-camera = Camera.start()           # cam_choice = 0,1 기본값 0 / width 기본값 최대값 / height 기본값 최대값 / 동영상 추가
+camera = Camera.start()           # cam_index = 0,1 기본값 0 / width 기본값 최대값 / height 기본값 최대값 / 동영상 추가
                                     # 변수명
+
 # faces_detection = Camera.faces_detection()        # min_detection_confidence 0.5 기본값 / 
 
 # angle 변수 필요
@@ -334,7 +334,7 @@ angle = 0 # motor current angle
 
 
 while camera.is_opened():
-    img = camera.read()        # mirror_mode = 0 or 1 기본값 1 /# 굳이,, 기본값 BGR  선택사항 RGB, GRAY, HSV 등등
+    img = camera.read()        # mirror_mode = 0 or 1 기본값 1 /
     
     c_x, c_y, w, h = camera.detect_faces(img,1)         # img / max_num_faces = 1, 2,, 기본값 1 / 
     # 옵션 추가 : box 안그리게 / 그리게 , 
@@ -356,7 +356,38 @@ while camera.is_opened():
 # 교과서 만들기
 
 
+###############################################
+
+from dynamikontrol import Module, Camera
+
+camera = Camera.start()           # cam_num = 0,1 기본값 0 / width 화면 최대 / height 화면 최대
+
+while camera.is_opened():
+    img = camera.read()        # mirror_mode = 1 기본값 1 
+    camera.show(img)           #  img / cam_name 기본값 "WebCam" / #cam_cancel_key 기본값 "esc"
 
 
+#######################################
+from dynamikontrol import Module, Camera
+
+camera = Camera()           # cam_num = 0,1 기본값 0 / width 기본값 최대값 / height 기본값 최대값 / 동영상 추가
+
+angle = 0 # motor current angle
+
+while camera.is_opened():
+    img = camera.read()        # mirror_mode = 0 or 1 기본값 1 /# 굳이,, 기본값 BGR  선택사항 RGB, GRAY, HSV 등등
+    
+    c_x, c_y, w, h = camera.detect_faces(img)         # img / max_num_faces = 1, 2,, 기본값 1 / draw_boxes = 0 or 1 기본값 1
+
+    if c_x < 0.4:
+        angle += 1
+        module.motor.angle( angle ) 
+    elif c_x > 0.6:
+        angle -= 1
+        module.motor.angle( angle ) 
+
+    Camera.show(img)           #  img / cam_name 기본값 "WebCam" / #cam_cancel_key 기본값 "esc"
+
+# 교과서 만들기
 
 
