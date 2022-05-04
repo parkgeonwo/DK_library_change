@@ -16,11 +16,9 @@
 from dynamikontrol import Module
 from Camera import Camera
 
-module = Module()
-# camera = Camera(path='/home/matrix/Desktop/code/video2.mp4')
+# module = Module()
+# camera = Camera(path='/home/matrix/Desktop/code/DK_library_change/video2.mp4')
 camera = Camera()
-
-angle = 0
 
 while camera.is_opened():
     frame = camera.get_frame()
@@ -28,23 +26,14 @@ while camera.is_opened():
     face = camera.detect_face(frame)
 
     if face:
-        if face.look_left():
-            print("공부해라1")
-        elif face.look_right():
-            print("공부해라2")
-
-    # if face:
-    #     if face.is_located_left():
-    #         angle += 3
-    #         module.motor.angle(angle)
-    #     elif face.is_located_right():
-    #         angle -= 3
-    #         module.motor.angle(angle)
+        if face.look_up():
+            print("up")
+        elif face.look_down():
+            print("down")
 
     camera.show(frame)
 
-module.disconnect()
-
+# module.disconnect()
 
 ###########################################
 
@@ -138,6 +127,9 @@ module.disconnect()
 #     if cv2.waitKey(5) & 0xFF == 27:
 #       break
 # cap.release()
+
+
+
 
 
 

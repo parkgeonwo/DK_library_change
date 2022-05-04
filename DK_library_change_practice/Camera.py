@@ -1,13 +1,14 @@
 import cv2
 import mediapipe as mp
+import numpy as np
 
 class Face():
     def __init__(self, face_landmarks):
         # face
-        left = face_landmarks.landmark[227].x
-        right = face_landmarks.landmark[454].x
+        left = face_landmarks.landmark[127].x
+        right = face_landmarks.landmark[356].x
         upper = face_landmarks.landmark[10].y
-        lower = face_landmarks.landmark[152].y
+        lower = face_landmarks.landmark[377].y
         width = right - left
         height = abs( upper - lower )
 
@@ -29,6 +30,14 @@ class Face():
         self.lips_height = abs( self.lips_upper - self.lips_lower )
 
         self.lips = Lips( x1 = self.lips_left, y1 = self.lips_upper, width = self.lips_width, height = self.lips_height )
+
+        lipsUpper_list = [61, 185, 40, 39, 37, 0, 267, 269, 270, 409, 291, 308, 415, 310, 311, 312, 13, 82, 81, 80, 191, 78]
+        lipsLower_list = [61, 146, 91, 181, 84, 17, 314, 405, 321, 375, 291, 308, 324, 318, 402, 317, 14, 87, 178, 88, 95, 78]
+        # lipsUpperInner = [78, 191, 80, 81, 82, 13, 312, 311, 310, 415, 308]
+        # lipsLowerInner = [78, 95, 88, 178, 87, 14, 317, 402, 318, 324, 308]
+
+        self.lipsUpper_list = [ [face_landmarks.landmark[i].x, face_landmarks.landmark[i].y ] for i in lipsUpper_list ]
+        self.lipsLower_list = [ [face_landmarks.landmark[i].x, face_landmarks.landmark[i].y ] for i in lipsLower_list ]
 
         ##### left eye
         self.left_eye_left = face_landmarks.landmark[33].x
@@ -52,17 +61,18 @@ class Face():
         self.right_eye = Eye( x1 = self.right_eye_left, y1 = self.right_eye_upper
                         , width = self.right_eye_width, height = self.right_eye_height )
 
-        # # right eye index list 
-        # RIGHT_EYE =[ 362, 382, ​​381, 380, 374, 373, 390, 249, 263, 466, 388, 387, 386, 385,384, 398 ]
         # # left eye index list 
         # LEFT_EYE=[ 33, 7, 163, 144, 145, 153, 154, 155, 133, 173, 157, 158, 159, 160, 161 , 246 ]
+        # # right eye index list 
+        # RIGHT_EYE =[ 362, 382, ​​381, 380, 374, 373, 390, 249, 263, 466, 388, 387, 386, 385,384, 398 ]
+
 
         #### left iris
         # self.left_iris_center = face_landmarks.landmark[468].x
         self.left_iris_right = face_landmarks.landmark[469].x
-        self.left_iris_lower = face_landmarks.landmark[470].y
         self.left_iris_left = face_landmarks.landmark[471].x
-        self.left_iris_upper = face_landmarks.landmark[472].y
+        self.left_iris_upper = face_landmarks.landmark[470].y
+        self.left_iris_lower = face_landmarks.landmark[472].y
         self.left_iris_width = self.left_iris_right-self.left_iris_left
         self.left_iris_height = abs(self.left_iris_upper - self.left_iris_lower)
 
@@ -72,9 +82,9 @@ class Face():
         #### right iris
         # self.right_iris_center = face_landmarks.landmark[473].x
         self.right_iris_right = face_landmarks.landmark[474].x
-        self.right_iris_lower = face_landmarks.landmark[475].y
         self.right_iris_left = face_landmarks.landmark[476].x
-        self.right_iris_upper = face_landmarks.landmark[477].y
+        self.right_iris_upper = face_landmarks.landmark[475].y
+        self.right_iris_lower = face_landmarks.landmark[477].y
         self.right_iris_width = self.right_iris_right-self.right_iris_left
         self.right_iris_height = abs(self.right_iris_upper - self.right_iris_lower)
 
@@ -93,14 +103,17 @@ class Face():
     def is_mouth_opened(self, ratio = 0.3 ):
         return (self.lips_height) >= (self.width*ratio)
 
-    def look_left(self, ratio = 0.35):
+    def left_eye_close(self, ratio = 0.06):
+        return (self.left_eye_height) <= (self.width*ratio)
+    def right_eye_close(self, ratio = 0.06):
+        return (self.right_eye_height) <= (self.width*ratio)
+
+    def look_left(self, ratio = 0.4):
         look_left = (self.left_iris.center_x <= (self.left_eye.x1 + self.left_eye.width*ratio)) and (self.right_iris.center_x <= (self.right_eye.x1 + self.right_eye.width*ratio))
         return look_left
-    def look_right(self, ratio = 0.35):
-        look_right = (self.left_iris.center_x >= (self.left_eye.x2 - self.left_eye.width*ratio)) and (self.right_iris.center_x >= (self.right_eye.x2 - self.right_eye.width*ratio))
+    def look_right(self, ratio = 0.6):
+        look_right = (self.left_iris.center_x >= (self.left_eye.x1 + self.left_eye.width*ratio)) and (self.right_iris.center_x >= (self.right_eye.x1 + self.right_eye.width*ratio))
         return look_right
-
-
 
     def __repr__(self):
         return 'center_x: %.3f, center_y: %.3f, width: %.3f, height: %.3f' % (self.center_x, self.center_y, self.width, self.height)
@@ -115,7 +128,6 @@ class Lips():
         self.y2 = self.y1 + height
         self.center_x = (self.x1 + self.x2) / 2
         self.center_y = (self.y1 + self.y2) / 2
-
     def __repr__(self):
         return 'center_x: %.3f, center_y: %.3f, width: %.3f, height: %.3f' % (self.center_x, self.center_y, self.width, self.height)
 
@@ -130,7 +142,6 @@ class Eye():
         self.y2 = self.y1 + height
         self.center_x = (self.x1 + self.x2) / 2
         self.center_y = (self.y1 + self.y2) / 2
-
     def __repr__(self):
         return 'center_x: %.3f, center_y: %.3f, width: %.3f, height: %.3f' % (self.center_x, self.center_y, self.width, self.height)
 
@@ -145,7 +156,6 @@ class Iris():
         self.y2 = self.y1 + height
         self.center_x = (self.x1 + self.x2) / 2
         self.center_y = (self.y1 + self.y2) / 2
-
     def __repr__(self):
         return 'center_x: %.3f, center_y: %.3f, width: %.3f, height: %.3f' % (self.center_x, self.center_y, self.width, self.height)
 
@@ -198,17 +208,51 @@ class Camera():
 
     def draw_faces(self, faces):
         for face in faces:
-            cv2.rectangle(self.frame, (int(round(self.width*face.x1)), int(round(self.height*face.y1))),
-                    (int(round(self.width*face.x2)),int(round(self.height*face.y2))),
-                    (0,255,0), 3)
+            face_points = cv2.ellipse2Poly( ( round(face.center_x*self.width) , round(face.center_y*self.height)),
+                                        (round(face.width*0.5*self.width), round(face.height*0.5*self.height)), 0, 0, 360, 15 )
+            self.frame = cv2.polylines( self.frame, [face_points], False, (0,255,0), 2 )
     
     def draw_lips(self, faces):
         for face in faces:
-            cv2.rectangle(self.frame, (int(round(self.width*face.lips.x1)), int(round(self.height*face.lips.y1))),
-                    (int(round(self.width*face.lips.x2)),int(round(self.height*face.lips.y2))),
-                    (0,255,0), 3)
+            for i in range( len( face.lipsUpper_list )):
+                face.lipsUpper_list[i][0] =  round(face.lipsUpper_list[i][0] * self.width)
+                face.lipsUpper_list[i][1] =  round(face.lipsUpper_list[i][1] * self.height)
+                face.lipsLower_list[i][0] =  round(face.lipsLower_list[i][0] * self.width)
+                face.lipsLower_list[i][1] =  round(face.lipsLower_list[i][1] * self.height)
 
-    def detect_face(self, frame, max_num_face = 1 , draw_face = True, draw_lips = True) -> object or None:
+            lips_upper_points = np.array( face.lipsUpper_list, np.int32 )
+            lips_lower_points = np.array( face.lipsLower_list, np.int32 )
+
+            self.frame = cv2.polylines( self.frame, [lips_upper_points], False, (0,255,0), 2 )
+            self.frame = cv2.polylines( self.frame, [lips_lower_points], False, (0,255,0), 2 )
+
+
+    def draw_eyes(self, faces):
+       for face in faces:
+            left_eye_c_x = round(face.left_eye.center_x*self.width)
+            left_eye_c_y = round(face.left_eye.center_y*self.height)
+            left_eye_width = round(face.left_eye.width*0.5*self.width)
+            left_eye_height = round(face.left_eye.height*0.5*self.height)
+
+            right_eye_c_x = round(face.right_eye.center_x*self.width)
+            right_eye_c_y = round(face.right_eye.center_y*self.height)
+            right_eye_width = round(face.right_eye.width*0.5*self.width)
+            right_eye_height = round(face.right_eye.height*0.5*self.height)
+
+            left_eye_points = cv2.ellipse2Poly( (left_eye_c_x, left_eye_c_y),(left_eye_width,left_eye_height), 0, 0, 360, 30 )
+            self.frame = cv2.polylines( self.frame, [left_eye_points], False, (0,255,0), 2 )
+
+            right_eye_points = cv2.ellipse2Poly( (right_eye_c_x, right_eye_c_y),(right_eye_width,right_eye_height), 0, 0, 360, 30 )
+            self.frame = cv2.polylines( self.frame, [right_eye_points], False, (0,255,0), 2 )
+
+    def draw_irides(self, faces):
+       for face in faces:
+            self.frame = cv2.circle( self.frame, ( round(face.left_iris.center_x*self.width) , round(face.left_iris.center_y*self.height) ),
+                                round( min( [self.width, self.height] ) * face.left_iris.width * 0.5 ), (0,255,0), 2 )
+            self.frame = cv2.circle( self.frame, ( round(face.right_iris.center_x*self.width) , round(face.right_iris.center_y*self.height) ),
+                                round( min( [self.width, self.height] ) * face.right_iris.width * 0.5 ), (0,255,0), 2 )
+
+    def detect_face(self, frame, max_num_face = 1 , draw_face = True, draw_lips = True, draw_eyes = True, draw_irides = True) -> object or None:
 
         mp_face_mesh = mp.solutions.face_mesh
 
@@ -233,16 +277,19 @@ class Camera():
 
         if draw_face:
             self.draw_faces(face)
-
         if draw_lips:
             self.draw_lips(face)
+        if draw_eyes:
+            self.draw_eyes(face)
+        if draw_irides:
+            self.draw_irides(face)
 
         if len(face) == 1 and max_num_face == 1:
             return face[0]
 
         return None
 
-    def detect_faces(self, frame, max_num_faces = 99, draw_faces =True, draw_lips = True) -> list:
+    def detect_faces(self, frame, max_num_faces = 99, draw_faces =True, draw_lips = True, draw_eyes = True, draw_irides = True) -> list:
  
         mp_face_mesh = mp.solutions.face_mesh
 
@@ -267,9 +314,12 @@ class Camera():
 
         if draw_faces:
             self.draw_faces(faces)
-
         if draw_lips:
             self.draw_lips(faces)
+        if draw_eyes:
+            self.draw_eyes(faces)
+        if draw_irides:
+            self.draw_irides(faces)
 
         return faces
 
