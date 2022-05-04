@@ -3,7 +3,12 @@ import mediapipe as mp
 import numpy as np
 
 class Face():
-    def __init__(self, face_landmarks):
+    def __init__(self, face_landmarks, frame_width, frame_height):
+
+        self.face_landmarks = face_landmarks
+        self.frame_width = frame_width
+        self.frame_height = frame_height
+
         # face
         left = face_landmarks.landmark[127].x
         right = face_landmarks.landmark[356].x
@@ -29,7 +34,9 @@ class Face():
         self.lips_width = self.lips_right - self.lips_left
         self.lips_height = abs( self.lips_upper - self.lips_lower )
 
-        self.lips = Lips( x1 = self.lips_left, y1 = self.lips_upper, width = self.lips_width, height = self.lips_height )
+        self.lips = Lips( x1 = self.lips_left, y1 = self.lips_upper,
+                        width = self.lips_width, height = self.lips_height,
+                        face_width = self.width, face_height = self.height )
 
         lipsUpper_list = [61, 185, 40, 39, 37, 0, 267, 269, 270, 409, 291, 308, 415, 310, 311, 312, 13, 82, 81, 80, 191, 78]
         lipsLower_list = [61, 146, 91, 181, 84, 17, 314, 405, 321, 375, 291, 308, 324, 318, 402, 317, 14, 87, 178, 88, 95, 78]
@@ -48,7 +55,8 @@ class Face():
         self.left_eye_height = abs(self.left_eye_upper - self.left_eye_lower)
 
         self.left_eye = Eye( x1 = self.left_eye_left, y1 = self.left_eye_upper
-                        , width = self.left_eye_width, height = self.left_eye_height )
+                        , width = self.left_eye_width, height = self.left_eye_height
+                        , face_width = self.width, face_height = self.height )
 
         ##### right eye
         self.right_eye_left = face_landmarks.landmark[362].x
@@ -59,7 +67,8 @@ class Face():
         self.right_eye_height = abs(self.right_eye_upper - self.right_eye_lower)
 
         self.right_eye = Eye( x1 = self.right_eye_left, y1 = self.right_eye_upper
-                        , width = self.right_eye_width, height = self.right_eye_height )
+                        , width = self.right_eye_width, height = self.right_eye_height
+                        , face_width = self.width, face_height = self.height )
 
         # # left eye index list 
         # LEFT_EYE=[ 33, 7, 163, 144, 145, 153, 154, 155, 133, 173, 157, 158, 159, 160, 161 , 246 ]
@@ -91,6 +100,12 @@ class Face():
         self.right_iris = Iris( x1 = self.right_iris_left, y1 = self.right_iris_upper
                         , width = self.right_iris_width, height = self.right_iris_height )
 
+        ### eyes
+        self.eyes = Eyes( self.left_eye, self.right_eye, self.left_iris, self.right_iris )
+
+        ### face turn estimation
+        self.head_pose = head_pose_estimation(self.frame_width, self.frame_height, self.face_landmarks)
+
     def is_located_left(self):
         return self.center_x <= 0.4
     def is_located_right(self):
@@ -100,26 +115,20 @@ class Face():
     def is_located_bottom(self):
         return self.center_y >= 0.6
 
-    def is_mouth_opened(self, ratio = 0.3 ):
-        return (self.lips_height) >= (self.width*ratio)
-
-    def left_eye_close(self, ratio = 0.06):
-        return (self.left_eye_height) <= (self.width*ratio)
-    def right_eye_close(self, ratio = 0.06):
-        return (self.right_eye_height) <= (self.width*ratio)
-
-    def look_left(self, ratio = 0.4):
-        look_left = (self.left_iris.center_x <= (self.left_eye.x1 + self.left_eye.width*ratio)) and (self.right_iris.center_x <= (self.right_eye.x1 + self.right_eye.width*ratio))
-        return look_left
-    def look_right(self, ratio = 0.6):
-        look_right = (self.left_iris.center_x >= (self.left_eye.x1 + self.left_eye.width*ratio)) and (self.right_iris.center_x >= (self.right_eye.x1 + self.right_eye.width*ratio))
-        return look_right
+    def is_turned_left(self):
+        return self.head_pose.left()
+    def is_turned_right(self):
+        return self.head_pose.right()
+    def is_turned_upward(self):
+        return self.head_pose.upward()
+    def is_turned_downward(self):
+        return self.head_pose.downward()
 
     def __repr__(self):
         return 'center_x: %.3f, center_y: %.3f, width: %.3f, height: %.3f' % (self.center_x, self.center_y, self.width, self.height)
 
 class Lips():
-    def __init__(self,x1,y1,width,height):
+    def __init__(self,x1,y1,width,height,face_width,face_height):
         self.x1 = x1
         self.y1 = y1
         self.width = width
@@ -128,12 +137,16 @@ class Lips():
         self.y2 = self.y1 + height
         self.center_x = (self.x1 + self.x2) / 2
         self.center_y = (self.y1 + self.y2) / 2
+        self.face_width = face_width
+        self.face_height = face_height
+    def is_opend(self, ratio = 0.3):
+        return (self.height) >= (self.face_width*ratio)
     def __repr__(self):
         return 'center_x: %.3f, center_y: %.3f, width: %.3f, height: %.3f' % (self.center_x, self.center_y, self.width, self.height)
 
-##### Eye
+#### Eye
 class Eye():
-    def __init__(self,x1,y1,width,height):
+    def __init__(self,x1,y1,width,height,face_width,face_height):
         self.x1 = x1
         self.y1 = y1
         self.width = width
@@ -142,6 +155,10 @@ class Eye():
         self.y2 = self.y1 + height
         self.center_x = (self.x1 + self.x2) / 2
         self.center_y = (self.y1 + self.y2) / 2
+        self.face_width = face_width
+        self.face_height = face_height
+    def is_closed(self, ratio = 0.06):
+        return (self.height) <= (self.face_width*ratio)
     def __repr__(self):
         return 'center_x: %.3f, center_y: %.3f, width: %.3f, height: %.3f' % (self.center_x, self.center_y, self.width, self.height)
 
@@ -158,6 +175,94 @@ class Iris():
         self.center_y = (self.y1 + self.y2) / 2
     def __repr__(self):
         return 'center_x: %.3f, center_y: %.3f, width: %.3f, height: %.3f' % (self.center_x, self.center_y, self.width, self.height)
+
+#### Eyes
+class Eyes():
+    def __init__(self,left_eye,right_eye,left_iris,right_iris):
+        self.left_eye = left_eye
+        self.right_eye = right_eye
+        self.left_iris = left_iris
+        self.right_iris = right_iris
+    def is_look_left(self, ratio = 0.4):
+        look_left = (self.left_iris.center_x <= (self.left_eye.x1 + self.left_eye.width*ratio)) and (self.right_iris.center_x <= (self.right_eye.x1 + self.right_eye.width*ratio))
+        return look_left
+    def is_look_right(self, ratio = 0.6):
+        look_right = (self.left_iris.center_x >= (self.left_eye.x1 + self.left_eye.width*ratio)) and (self.right_iris.center_x >= (self.right_eye.x1 + self.right_eye.width*ratio))
+        return look_right
+
+class head_pose_estimation():
+    def __init__(self,frame_width, frame_height,face_landmarks ):
+        self.frame_width = frame_width
+        self.frame_height = frame_height
+        self.face_landmarks = face_landmarks
+
+        face_2d = []
+        face_3d = []
+        for idx, lm in enumerate(self.face_landmarks.landmark):
+            if idx == 33 or idx == 263 or idx == 1 or idx == 61 or idx == 291 or idx == 199:
+                if idx == 1:
+                    nose_2d = (lm.x * self.frame_width, lm.y * self.frame_height)
+                    nose_3d = (lm.x * self.frame_width, lm.y * self.frame_height, lm.z * 3000)
+
+                x, y = int(lm.x * self.frame_width), int(lm.y * self.frame_height)
+
+                # Get the 2D Coordinates
+                face_2d.append([x, y])
+                # Get the 3D Coordinates
+                face_3d.append([x, y, lm.z])       
+        # Convert it to the NumPy array
+        face_2d = np.array(face_2d, dtype=np.float64)
+        # Convert it to the NumPy array
+        face_3d = np.array(face_3d, dtype=np.float64)
+        # The camera matrix
+        focal_length = 1 * self.frame_width
+        cam_matrix = np.array([ [focal_length, 0, self.frame_height / 2],
+                                [0, focal_length, self.frame_width / 2],
+                                [0, 0, 1]])
+        # The distortion parameters
+        dist_matrix = np.zeros((4, 1), dtype=np.float64)
+        # Solve PnP
+        success, rot_vec, trans_vec = cv2.solvePnP(face_3d, face_2d, cam_matrix, dist_matrix)
+        # Get rotational matrix
+        rmat, jac = cv2.Rodrigues(rot_vec)
+        # Get angles
+        angles, mtxR, mtxQ, Qx, Qy, Qz = cv2.RQDecomp3x3(rmat)
+        # Get the y rotation degree
+        self.x = angles[0] * 360
+        self.y = angles[1] * 360
+        self.z = angles[2] * 360
+        # See where the user's head tilting
+        if self.y < -15:
+            self.text = "Looking Left"
+        elif self.y > 15:
+            self.text = "Looking Right"
+        elif self.x < -1:
+            self.text = "Looking Down"
+        elif self.x > 20:
+            self.text = "Looking Up"
+        else:
+            self.text = "Forward"
+
+    def left(self):
+        return self.y < -15
+    def right(self):
+        return self.y > 15
+    def upward(self):
+        return self.x > 20
+    def downward(self):
+        return self.x < -1
+
+        # # Display the nose direction
+        # nose_3d_projection, jacobian = cv2.projectPoints(nose_3d, rot_vec, trans_vec, cam_matrix, dist_matrix)
+
+        # p1 = (int(nose_2d[0]), int(nose_2d[1]))
+        # p2 = (int(nose_2d[0] + y * 10) , int(nose_2d[1] - x * 10))
+        
+        # cv2.line(image, p1, p2, (255, 0, 0), 3)
+
+        # # Add the text on the image
+        # cv2.putText(image, text, (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 2)
+
 
 class Camera():
     def __init__(self, path:any=0, width:int = None, height:int = None ) -> None:
@@ -226,7 +331,6 @@ class Camera():
             self.frame = cv2.polylines( self.frame, [lips_upper_points], False, (0,255,0), 2 )
             self.frame = cv2.polylines( self.frame, [lips_lower_points], False, (0,255,0), 2 )
 
-
     def draw_eyes(self, faces):
        for face in faces:
             left_eye_c_x = round(face.left_eye.center_x*self.width)
@@ -252,7 +356,12 @@ class Camera():
             self.frame = cv2.circle( self.frame, ( round(face.right_iris.center_x*self.width) , round(face.right_iris.center_y*self.height) ),
                                 round( min( [self.width, self.height] ) * face.right_iris.width * 0.5 ), (0,255,0), 2 )
 
-    def detect_face(self, frame, max_num_face = 1 , draw_face = True, draw_lips = True, draw_eyes = True, draw_irides = True) -> object or None:
+    def write_direction(self, faces):
+        for face in faces:
+            self.frame = cv2.putText(self.frame, face.head_pose.text, (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 2)
+
+    def detect_face(self, frame, max_num_face = 1 , draw_face = True, draw_lips = True, draw_eyes = True, draw_irides = True,
+                        write_direction = True) -> object or None:
 
         mp_face_mesh = mp.solutions.face_mesh
 
@@ -273,7 +382,7 @@ class Camera():
 
                 if results.multi_face_landmarks:
                     for face_landmarks in results.multi_face_landmarks:  
-                        face.append( Face(face_landmarks) )
+                        face.append( Face(face_landmarks, self.width, self.height) )
 
         if draw_face:
             self.draw_faces(face)
@@ -283,6 +392,8 @@ class Camera():
             self.draw_eyes(face)
         if draw_irides:
             self.draw_irides(face)
+        if write_direction:
+            self.write_direction(face)
 
         if len(face) == 1 and max_num_face == 1:
             return face[0]

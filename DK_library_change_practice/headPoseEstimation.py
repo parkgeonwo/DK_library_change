@@ -1,7 +1,7 @@
 import cv2
 import mediapipe as mp
 import numpy as np
-import time
+
 
 mp_face_mesh = mp.solutions.face_mesh
 face_mesh = mp_face_mesh.FaceMesh(min_detection_confidence=0.5, min_tracking_confidence=0.5)
@@ -15,8 +15,6 @@ cap = cv2.VideoCapture(0)
 
 while cap.isOpened():
     success, image = cap.read()
-
-    start = time.time()
 
     # Flip the image horizontally for a later selfie-view display
     # Also convert the color space from BGR to RGB
@@ -86,13 +84,13 @@ while cap.isOpened():
           
 
             # See where the user's head tilting
-            if y < -10:
+            if y < -15:
                 text = "Looking Left"
-            elif y > 10:
+            elif y > 15:
                 text = "Looking Right"
-            elif x < -10:
+            elif x < -1:
                 text = "Looking Down"
-            elif x > 10:
+            elif x > 20:
                 text = "Looking Up"
             else:
                 text = "Forward"
@@ -107,23 +105,14 @@ while cap.isOpened():
 
             # Add the text on the image
             cv2.putText(image, text, (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 2)
-            cv2.putText(image, "x: " + str(np.round(x,2)), (500, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-            cv2.putText(image, "y: " + str(np.round(y,2)), (500, 100), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-            cv2.putText(image, "z: " + str(np.round(z,2)), (500, 150), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-
-
-        end = time.time()
-        totalTime = end - start
-
-        fps = 1 / totalTime
-        #print("FPS: ", fps)
-
-        cv2.putText(image, f'FPS: {int(fps)}', (20,450), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0,255,0), 2)
+            # cv2.putText(image, "x: " + str(np.round(x,2)), (500, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+            # cv2.putText(image, "y: " + str(np.round(y,2)), (500, 100), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+            # cv2.putText(image, "z: " + str(np.round(z,2)), (500, 150), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
 
         mp_drawing.draw_landmarks(
                     image=image,
                     landmark_list=face_landmarks,
-                    connections=mp_face_mesh.FACE_CONNECTIONS,
+                    connections=mp_face_mesh.FACEMESH_CONTOURS,
                     landmark_drawing_spec=drawing_spec,
                     connection_drawing_spec=drawing_spec)
 
