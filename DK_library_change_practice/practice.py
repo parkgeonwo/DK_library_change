@@ -20,18 +20,15 @@ module = Module()
 # camera = Camera(path='/home/matrix/Desktop/code/video2.mp4')
 camera = Camera()
 
-angle = 0
-
 while camera.is_opened():
     frame = camera.get_frame()
 
     face = camera.detect_face(frame)
 
     if face:
-        if face.look_left():
-            print("공부해라1")
-        elif face.look_right():
-            print("공부해라2")
+        if face.look_left() or face.look_right():
+            module.motor.angle(-50)
+            module.motor.angle(50, period = 2)
 
     # if face:
     #     if face.is_located_left():

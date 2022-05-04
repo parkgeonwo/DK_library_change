@@ -93,10 +93,10 @@ class Face():
     def is_mouth_opened(self, ratio = 0.3 ):
         return (self.lips_height) >= (self.width*ratio)
 
-    def look_left(self, ratio = 0.35):
+    def look_left(self, ratio = 0.4):
         look_left = (self.left_iris.center_x <= (self.left_eye.x1 + self.left_eye.width*ratio)) and (self.right_iris.center_x <= (self.right_eye.x1 + self.right_eye.width*ratio))
         return look_left
-    def look_right(self, ratio = 0.35):
+    def look_right(self, ratio = 0.4):
         look_right = (self.left_iris.center_x >= (self.left_eye.x2 - self.left_eye.width*ratio)) and (self.right_iris.center_x >= (self.right_eye.x2 - self.right_eye.width*ratio))
         return look_right
 
