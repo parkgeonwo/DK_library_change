@@ -1,15 +1,13 @@
-from dynamikontrol import Module
+from dynamikontrol import Module, Timer
 import time
 
-m = Module()
+t1 = Timer()
+
+module_push = Module(serial_no='AC000023')
+
+module_push.motor.angle(-75)
+t1.callback_after(func=module_push.motor.angle, args=(75,), after=3)
+t1.callback_after(func=module_push.motor.angle, args=(-45,), after=5)
 
 
-m.motor.angle(-60)
-time.sleep(1)
-# 2초 주기로 120도 원호운동
-while True:
-    m.motor.angle(60,1)
-    time.sleep(1)
-    m.motor.angle(-60,1)
-    time.sleep(1)
 
