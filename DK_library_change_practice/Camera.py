@@ -139,7 +139,7 @@ class Lips():
         self.center_y = (self.y1 + self.y2) / 2
         self.face_width = face_width
         self.face_height = face_height
-    def is_opend(self, ratio = 0.3):
+    def is_opened(self, ratio = 0.3):
         return (self.height) >= (self.face_width*ratio)
     def __repr__(self):
         return 'center_x: %.3f, center_y: %.3f, width: %.3f, height: %.3f' % (self.center_x, self.center_y, self.width, self.height)
@@ -209,13 +209,14 @@ class head_pose_estimation():
                 # Get the 2D Coordinates
                 face_2d.append([x, y])
                 # Get the 3D Coordinates
-                face_3d.append([x, y, lm.z])       
+                face_3d.append([x, y, lm.z])
+
         # Convert it to the NumPy array
         face_2d = np.array(face_2d, dtype=np.float64)
         # Convert it to the NumPy array
         face_3d = np.array(face_3d, dtype=np.float64)
         # The camera matrix
-        focal_length = 1 * self.frame_width
+        focal_length = 1 * self.frame_width       # 초점거리 1배
         cam_matrix = np.array([ [focal_length, 0, self.frame_height / 2],
                                 [0, focal_length, self.frame_width / 2],
                                 [0, 0, 1]])
