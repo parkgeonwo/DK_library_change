@@ -23,13 +23,10 @@ camera = Camera()
 while camera.is_opened():
     frame = camera.get_frame()
 
-    face = camera.detect_face(frame)
-
-    # if face:
-    #     if face.eyes.is_look_left():
-    #         print("left")
-    #     elif face.eyes.is_look_right():
-    #         print("right")
+    hand = camera.detect_hand(frame)
+    if hand:
+        distance = hand.find_finger_distance("index","pinky")
+        print(distance)
 
     camera.show(frame)
 
