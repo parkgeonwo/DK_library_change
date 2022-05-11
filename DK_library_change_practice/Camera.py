@@ -1,13 +1,14 @@
 import cv2
 import mediapipe as mp
 import numpy as np
+import math
 
 class Face():
-    def __init__(self, face_landmarks, frame_width, frame_height):
+    def __init__(self, face_landmarks, frame):
 
         self.face_landmarks = face_landmarks
-        self.frame_width = frame_width
-        self.frame_height = frame_height
+        self.frame = frame
+        self.frame_height, self.frame_width, c = frame.shape
 
         # face
         left = face_landmarks.landmark[127].x
@@ -139,7 +140,7 @@ class Lips():
         self.center_y = (self.y1 + self.y2) / 2
         self.face_width = face_width
         self.face_height = face_height
-    def is_opend(self, ratio = 0.3):
+    def is_opened(self, ratio = 0.3):
         return (self.height) >= (self.face_width*ratio)
     def __repr__(self):
         return 'center_x: %.3f, center_y: %.3f, width: %.3f, height: %.3f' % (self.center_x, self.center_y, self.width, self.height)
@@ -209,13 +210,14 @@ class head_pose_estimation():
                 # Get the 2D Coordinates
                 face_2d.append([x, y])
                 # Get the 3D Coordinates
-                face_3d.append([x, y, lm.z])       
+                face_3d.append([x, y, lm.z])
+
         # Convert it to the NumPy array
         face_2d = np.array(face_2d, dtype=np.float64)
         # Convert it to the NumPy array
         face_3d = np.array(face_3d, dtype=np.float64)
         # The camera matrix
-        focal_length = 1 * self.frame_width
+        focal_length = 1 * self.frame_width       # 초점거리 1배
         cam_matrix = np.array([ [focal_length, 0, self.frame_height / 2],
                                 [0, focal_length, self.frame_width / 2],
                                 [0, 0, 1]])
@@ -263,6 +265,127 @@ class head_pose_estimation():
         # # Add the text on the image
         # cv2.putText(image, text, (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 2)
 
+class Hand():
+    def __init__(self, hand_landmarks, frame):
+            self.hand_landmarks = hand_landmarks
+            self.tipIds = [4,8,12,16,20]
+            self.lmList = []
+
+            self.frame = frame
+            self.frame_height, self.frame_width, c = frame.shape
+
+            self.xList = []
+            self.yList = []
+            self.lmList = []
+            self.joint = np.zeros((21,3))
+
+            for id, lm in enumerate(self.hand_landmarks.landmark):
+                cx, cy = int(lm.x * self.frame_width), int(lm.y * self.frame_height)
+                self.xList.append(cx)
+                self.yList.append(cy)
+                self.lmList.append([id, cx, cy])
+
+                self.joint[id] = [lm.x, lm.y, lm.z]
+
+    def thumb_finger_up(self):
+        return self.lmList[self.tipIds[0]][1] > self.lmList[self.tipIds[0] - 1][1]
+
+    def index_finger_up(self):
+        return self.lmList[self.tipIds[1]][2] < self.lmList[self.tipIds[1] - 2][2]
+
+    def middle_finger_up(self):
+        return self.lmList[self.tipIds[2]][2] < self.lmList[self.tipIds[2] - 2][2]
+
+    def ring_finger_up(self):
+        return self.lmList[self.tipIds[3]][2] < self.lmList[self.tipIds[3] - 2][2]
+
+    def pinky_finger_up(self):
+        return self.lmList[self.tipIds[4]][2] < self.lmList[self.tipIds[4] - 2][2]
+
+    def find_finger_distance(self, tipId1, tipId2):
+
+        finger_list = ["thumb","index","middle","ring","pinky"]
+
+        for i in finger_list:
+            if tipId1 == i:
+                tipId1 = self.tipIds[finger_list.index(i)]
+            if tipId2 == i:
+                tipId2 = self.tipIds[finger_list.index(i)]
+
+        x1, y1 = self.lmList[tipId1][1:]
+        x2, y2 = self.lmList[tipId2][1:]
+        # cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
+        # radius = 5
+        # thick = 3
+        distance = math.hypot(x2 - x1, y2 - y1)
+
+        return distance
+
+    def find_hand_distance(self):
+        # x is the raw distance , y is the value in cm
+        x = [300, 245, 200, 170, 145, 130, 112, 103, 93, 87, 80, 75, 70, 67, 62, 59, 57]
+        y = [20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100]
+        coff = np.polyfit(x, y, 2)  # y = Ax^2 + Bx + C     # 이차함수 A,B,C coff 뽑아줌
+
+        x1, y1 = self.lmList[5][1:]
+        x2, y2 = self.lmList[17][1:]
+ 
+        distance = int(math.sqrt((y2 - y1) ** 2 + (x2 - x1) ** 2))
+        A, B, C = coff
+        distanceCM = A * distance ** 2 + B * distance + C
+ 
+        return distanceCM
+
+    def make_shape(self):
+
+        rps_gesture = {0:'rock', 5:'paper', 9:'scissors'}
+
+        file = np.genfromtxt('/home/matrix/Desktop/code/DK_library_change/DK_library_change_practice/data/gesture_train.csv', delimiter=',')
+        angle = file[:,:-1].astype(np.float32)
+        label = file[:, -1].astype(np.float32)
+        knn = cv2.ml.KNearest_create()
+        knn.train(angle, cv2.ml.ROW_SAMPLE, label)
+
+        # Compute angles between joints
+        v1 = self.joint[[0,1,2,3,0,5,6,7,0,9,10,11,0,13,14,15,0,17,18,19],:] # Parent joint
+        v2 = self.joint[[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20],:] # Child joint
+        v = v2 - v1 # [20,3]
+        # Normalize v
+        v = v / np.linalg.norm(v, axis=1)[:, np.newaxis]
+
+        # Get angle using arcos of dot product
+        angle = np.arccos(np.einsum('nt,nt->n',
+            v[[0,1,2,4,5,6,8,9,10,12,13,14,16,17,18],:], 
+            v[[1,2,3,5,6,7,9,10,11,13,14,15,17,18,19],:])) # [15,]
+
+        angle = np.degrees(angle) # Convert radian to degree
+
+        # Inference gesture
+        data = np.array([angle], dtype=np.float32)
+        ret, results, neighbours, dist = knn.findNearest(data, 3)
+        idx = int(results[0][0])
+
+        # Draw gesture result
+        # if idx in rps_gesture.keys():
+        #     cv2.putText(self.frame, text=rps_gesture[idx].upper(), org=(int(self.hand_landmarks.landmark[0].x * self.frame.shape[1]), int(self.hand_landmarks.landmark[0].y * self.frame.shape[0] + 20)), fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=(255, 255, 255), thickness=2)
+
+        # Other gestures
+        # cv2.putText(self.frame, text=gesture[idx].upper(), org=(int(self.hand_landmarks.landmark[0].x * self.frame.shape[1]), int(self.hand_landmarks.landmark[0].y * self.frame.shape[0] + 20)), fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=(255, 255, 255), thickness=2)
+
+        return idx
+
+    def is_shape_rock(self):
+        idx = self.make_shape()
+        return idx == 0
+    def is_shape_scissor(self):
+        idx = self.make_shape()
+        return idx == 9
+    def is_shape_paper(self):
+        idx = self.make_shape()
+        return idx == 5
+    def is_shape_ok(self):
+        idx = self.make_shape()
+        return idx == 10
 
 class Camera():
     def __init__(self, path:any=0, width:int = None, height:int = None ) -> None:
@@ -313,9 +436,9 @@ class Camera():
 
     def draw_faces(self, faces):
         for face in faces:
-            face_points = cv2.ellipse2Poly( ( round(face.center_x*self.width) , round(face.center_y*self.height)),
-                                        (round(face.width*0.5*self.width), round(face.height*0.5*self.height)), 0, 0, 360, 15 )
-            self.frame = cv2.polylines( self.frame, [face_points], False, (0,255,0), 2 )
+            cv2.rectangle(self.frame, (int(round(self.width*face.x1)), int(round(self.height*face.y1))),
+                    (int(round(self.width*face.x2)),int(round(self.height*face.y2))),
+                    (0,255,0), 3)
     
     def draw_lips(self, faces):
         for face in faces:
@@ -360,6 +483,25 @@ class Camera():
         for face in faces:
             self.frame = cv2.putText(self.frame, face.head_pose.text, (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 2)
 
+    def draw_hands(self, hands):
+        thumb_list = [0,1,2,3,4]
+        index_list = [0,5,6,7,8]
+        middle_list = [9,10,11,12]
+        ring_list = [13,14,15,16]
+        pinky_list = [0,17,18,19,20]
+        bridge_list = [5,9,13,17]
+
+        temp_list = [ thumb_list, index_list, middle_list, ring_list, pinky_list, bridge_list ]
+
+        for hand in hands:
+            for j in range(len(temp_list)):
+                for i in range(len(temp_list[j])-1):
+                    self.frame = cv2.line( self.frame, ( hand.lmList[temp_list[j][i]][1] , hand.lmList[temp_list[j][i]][2] ),
+                                        ( hand.lmList[temp_list[j][i+1]][1] , hand.lmList[temp_list[j][i+1]][2] ), (0,255,0), 3 )
+
+            for i in range(21):
+                self.frame = cv2.circle(self.frame, (hand.lmList[i][1] , hand.lmList[i][2]), 4, (255, 0, 255), cv2.FILLED)
+
     def detect_face(self, frame, max_num_face = 1 , draw_face = True, draw_lips = True, draw_eyes = True, draw_irides = True,
                         write_direction = True) -> object or None:
 
@@ -382,7 +524,7 @@ class Camera():
 
                 if results.multi_face_landmarks:
                     for face_landmarks in results.multi_face_landmarks:  
-                        face.append( Face(face_landmarks, self.width, self.height) )
+                        face.append( Face(face_landmarks, frame) )
 
         if draw_face:
             self.draw_faces(face)
@@ -402,7 +544,7 @@ class Camera():
 
     def detect_faces(self, frame, max_num_faces = 99, draw_faces =True, draw_lips = True, draw_eyes = True, draw_irides = True) -> list:
  
-        mp_face_mesh = mp.solutions.face_mesh
+        mp_face_mesh = mp.solutions.face_mesh  
 
         faces = []
 
@@ -434,6 +576,61 @@ class Camera():
 
         return faces
 
+    def detect_hand(self, frame, max_num_hand = 1, draw_hand = True):
+        mp_hands = mp.solutions.hands
 
+        hand = []
+
+        with mp_hands.Hands(
+            max_num_hands=max_num_hand,
+            model_complexity=0,
+            min_detection_confidence=0.5,
+            min_tracking_confidence=0.5) as detect_hands:
+
+                frame.flags.writeable = False
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                results = detect_hands.process(frame)
+
+                frame.flags.writeable = True
+                frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+
+                if results.multi_hand_landmarks:
+                    for hand_landmarks in results.multi_hand_landmarks:
+                        hand.append( Hand(hand_landmarks, frame) )
+
+        if draw_hand:
+            self.draw_hands(hand)
+
+        if len(hand) == 1 and max_num_hand == 1:
+            return hand[0]
+
+        return None
+
+    def detect_hands(self, frame, max_num_hands = 99, draw_hands = True):
+        mp_hands = mp.solutions.hands
+
+        hands = []
+
+        with mp_hands.Hands(
+            max_num_hands=max_num_hands,
+            model_complexity=0,
+            min_detection_confidence=0.5,
+            min_tracking_confidence=0.5) as detect_hands:
+
+                frame.flags.writeable = False
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                results = detect_hands.process(frame)
+
+                frame.flags.writeable = True
+                frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+
+                if results.multi_hand_landmarks:
+                    for hand_landmarks in results.multi_hand_landmarks:
+                        hands.append( Hand(hand_landmarks, frame) )
+
+        if draw_hands:
+            self.draw_hands(hands)
+
+        return hands
 
 
