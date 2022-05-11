@@ -277,12 +277,15 @@ class Hand():
             self.xList = []
             self.yList = []
             self.lmList = []
+            self.joint = np.zeros((21,3))
 
             for id, lm in enumerate(self.hand_landmarks.landmark):
                 cx, cy = int(lm.x * self.frame_width), int(lm.y * self.frame_height)
                 self.xList.append(cx)
                 self.yList.append(cy)
                 self.lmList.append([id, cx, cy])
+
+                self.joint[id] = [lm.x, lm.y, lm.z]
 
     def thumb_finger_up(self):
         return self.lmList[self.tipIds[0]][1] > self.lmList[self.tipIds[0] - 1][1]
@@ -318,6 +321,56 @@ class Hand():
  
         return distance
 
+    def make_shape(self):
+
+        rps_gesture = {0:'rock', 5:'paper', 9:'scissors'}
+
+        file = np.genfromtxt('/home/matrix/Desktop/code/DK_library_change/DK_library_change_practice/data/gesture_train.csv', delimiter=',')
+        angle = file[:,:-1].astype(np.float32)
+        label = file[:, -1].astype(np.float32)
+        knn = cv2.ml.KNearest_create()
+        knn.train(angle, cv2.ml.ROW_SAMPLE, label)
+
+        # Compute angles between joints
+        v1 = self.joint[[0,1,2,3,0,5,6,7,0,9,10,11,0,13,14,15,0,17,18,19],:] # Parent joint
+        v2 = self.joint[[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20],:] # Child joint
+        v = v2 - v1 # [20,3]
+        # Normalize v
+        v = v / np.linalg.norm(v, axis=1)[:, np.newaxis]
+
+        # Get angle using arcos of dot product
+        angle = np.arccos(np.einsum('nt,nt->n',
+            v[[0,1,2,4,5,6,8,9,10,12,13,14,16,17,18],:], 
+            v[[1,2,3,5,6,7,9,10,11,13,14,15,17,18,19],:])) # [15,]
+
+        angle = np.degrees(angle) # Convert radian to degree
+
+        # Inference gesture
+        data = np.array([angle], dtype=np.float32)
+        ret, results, neighbours, dist = knn.findNearest(data, 3)
+        idx = int(results[0][0])
+
+        # Draw gesture result
+        if idx in rps_gesture.keys():
+            cv2.putText(self.frame, text=rps_gesture[idx].upper(), org=(int(self.hand_landmarks.landmark[0].x * self.frame.shape[1]), int(self.hand_landmarks.landmark[0].y * self.frame.shape[0] + 20)), fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=(255, 255, 255), thickness=2)
+
+        # Other gestures
+        # cv2.putText(self.frame, text=gesture[idx].upper(), org=(int(self.hand_landmarks.landmark[0].x * self.frame.shape[1]), int(self.hand_landmarks.landmark[0].y * self.frame.shape[0] + 20)), fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=(255, 255, 255), thickness=2)
+
+        return idx
+
+    def is_shape_rock(self):
+        idx = self.make_shape()
+        return idx == 0
+    def is_shape_scissor(self):
+        idx = self.make_shape()
+        return idx == 9
+    def is_shape_paper(self):
+        idx = self.make_shape()
+        return idx == 5
+    def is_shape_ok(self):
+        idx = self.make_shape()
+        return idx == 10
 
 class Camera():
     def __init__(self, path:any=0, width:int = None, height:int = None ) -> None:
