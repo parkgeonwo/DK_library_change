@@ -302,24 +302,39 @@ class Hand():
     def pinky_finger_up(self):
         return self.lmList[self.tipIds[4]][2] < self.lmList[self.tipIds[4] - 2][2]
 
-    def find_finger_distance(self, p1, p2):
+    def find_finger_distance(self, tipId1, tipId2):
 
         finger_list = ["thumb","index","middle","ring","pinky"]
 
         for i in finger_list:
-            if p1 == i:
-                p1 = self.tipIds[finger_list.index(i)]
-            if p2 == i:
-                p2 = self.tipIds[finger_list.index(i)]
+            if tipId1 == i:
+                tipId1 = self.tipIds[finger_list.index(i)]
+            if tipId2 == i:
+                tipId2 = self.tipIds[finger_list.index(i)]
 
-        x1, y1 = self.lmList[p1][1:]
-        x2, y2 = self.lmList[p2][1:]
-        cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
-        radius = 5
-        thick = 3
+        x1, y1 = self.lmList[tipId1][1:]
+        x2, y2 = self.lmList[tipId2][1:]
+        # cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
+        # radius = 5
+        # thick = 3
         distance = math.hypot(x2 - x1, y2 - y1)
- 
+
         return distance
+
+    def find_hand_distance(self):
+        # x is the raw distance , y is the value in cm
+        x = [300, 245, 200, 170, 145, 130, 112, 103, 93, 87, 80, 75, 70, 67, 62, 59, 57]
+        y = [20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100]
+        coff = np.polyfit(x, y, 2)  # y = Ax^2 + Bx + C     # 이차함수 A,B,C coff 뽑아줌
+
+        x1, y1 = self.lmList[5][1:]
+        x2, y2 = self.lmList[17][1:]
+ 
+        distance = int(math.sqrt((y2 - y1) ** 2 + (x2 - x1) ** 2))
+        A, B, C = coff
+        distanceCM = A * distance ** 2 + B * distance + C
+ 
+        return distanceCM
 
     def make_shape(self):
 
@@ -351,8 +366,8 @@ class Hand():
         idx = int(results[0][0])
 
         # Draw gesture result
-        if idx in rps_gesture.keys():
-            cv2.putText(self.frame, text=rps_gesture[idx].upper(), org=(int(self.hand_landmarks.landmark[0].x * self.frame.shape[1]), int(self.hand_landmarks.landmark[0].y * self.frame.shape[0] + 20)), fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=(255, 255, 255), thickness=2)
+        # if idx in rps_gesture.keys():
+        #     cv2.putText(self.frame, text=rps_gesture[idx].upper(), org=(int(self.hand_landmarks.landmark[0].x * self.frame.shape[1]), int(self.hand_landmarks.landmark[0].y * self.frame.shape[0] + 20)), fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=(255, 255, 255), thickness=2)
 
         # Other gestures
         # cv2.putText(self.frame, text=gesture[idx].upper(), org=(int(self.hand_landmarks.landmark[0].x * self.frame.shape[1]), int(self.hand_landmarks.landmark[0].y * self.frame.shape[0] + 20)), fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=(255, 255, 255), thickness=2)

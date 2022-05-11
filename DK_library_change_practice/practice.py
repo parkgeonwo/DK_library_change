@@ -25,8 +25,8 @@ while camera.is_opened():
 
     hand = camera.detect_hand(frame)
     if hand:
-        if hand.is_shape_rock():
-            print("rock")
+        distance = hand.find_finger_distance("index","middle")
+        print(distance)
 
     camera.show(frame)
 
