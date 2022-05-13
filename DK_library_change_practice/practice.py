@@ -23,14 +23,14 @@ camera = Camera()
 while camera.is_opened():
     frame = camera.get_frame()
 
-    hand = camera.detect_hand(frame,write_shape=True, write_hand_distance=True)
-    if hand:
-        print(hand.fingers.is_up())
+    # hand = camera.detect_hand(frame,write_shape=True, write_hand_distance=True)
+    # if hand:
+    #     print(hand.fingers.is_up())
 
-    # face = camera.detect_face(frame)
+    face = camera.detect_face(frame)
 
-    # if face:
-    #     print(face.landmark_list[1])
+    if face:
+        print(face.landmark_list[1])
     #     if face.direction == "up":
     #         print("wow")
 
