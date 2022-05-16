@@ -255,9 +255,12 @@ class head_pose_estimation():
         # cv2.putText(image, text, (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 2)
 
 class Hand():
-    def __init__(self, hand_landmarks, frame):
+    def __init__(self, hand_landmarks, frame, hand_angle_data, hand_knn):
             self.hand_landmarks = hand_landmarks
             self.tipIds = [4,8,12,16,20]
+
+            self.hand_knn = hand_knn
+            self.hand_angle_data = hand_angle_data
 
             self.frame = frame
             self.frame_height, self.frame_width, c = frame.shape
@@ -302,9 +305,87 @@ class Hand():
         return distanceCM
 
     def detect_gesture(self):
+        # Compute angles between joints
+        v1 = self.joint[[0,1,2,3,0,5,6,7,0,9,10,11,0,13,14,15,0,17,18,19],:] # Parent joint
+        v2 = self.joint[[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20],:] # Child joint
+        v = v2 - v1 # [20,3]
+        # Normalize v
+        v = v / np.linalg.norm(v, axis=1)[:, np.newaxis]
 
-        # file = np.genfromtxt('/home/matrix/Desktop/code/DK_library_change/DK_library_change_practice/data/gesture_train.csv', delimiter=',')
-        
+        # Get angle using arcos of dot product
+        self.hand_angle_data = np.arccos(np.einsum('nt,nt->n',
+            v[[0,1,2,4,5,6,8,9,10,12,13,14,16,17,18],:], 
+            v[[1,2,3,5,6,7,9,10,11,13,14,15,17,18,19],:])) # [15,]
+
+        self.hand_angle_data = np.degrees(self.hand_angle_data) # Convert radian to degree
+
+        # Inference gesture
+        data = np.array([self.hand_angle_data], dtype=np.float32)
+        ret, results, neighbours, dist = self.hand_knn.findNearest(data, 3)
+        idx = int(results[0][0])
+
+        text = self.gesture_dict[idx].lower()
+
+        return text
+
+class Fingers():
+    def __init__(self, landmark_list, tipIds):
+        self.landmark_list = landmark_list
+        self.tipIds = tipIds
+
+    def is_thumb_up(self):
+        return self.landmark_list[self.tipIds[0]][1] < self.landmark_list[self.tipIds[0] - 2][1]
+
+    def is_index_up(self):
+        return self.landmark_list[self.tipIds[1]][1] < self.landmark_list[self.tipIds[1] - 2][1]
+
+    def is_middle_up(self):
+        return self.landmark_list[self.tipIds[2]][1] < self.landmark_list[self.tipIds[2] - 2][1]
+
+    def is_ring_up(self):
+        return self.landmark_list[self.tipIds[3]][1] < self.landmark_list[self.tipIds[3] - 2][1]
+
+    def is_pinky_up(self):
+        return self.landmark_list[self.tipIds[4]][1] < self.landmark_list[self.tipIds[4] - 2][1]
+
+    def is_up(self):
+        is_up_list = [ self.is_thumb_up(), self.is_index_up(), self.is_middle_up(), self.is_ring_up(), self.is_pinky_up() ]
+        return_list = []
+        for i in is_up_list:
+            if i is True:
+                return_list.append(True)
+            else:
+                return_list.append(False)
+
+        return return_list
+
+    def get_distance(self, tipId1, tipId2):
+
+        tipId1 = (tipId1 + 1) * 4
+        tipId2 = (tipId2 + 1) * 4
+
+        x1, y1 = self.landmark_list[tipId1]
+        x2, y2 = self.landmark_list[tipId2]
+
+        distance = math.hypot(x2 - x1, y2 - y1)
+
+        return distance
+
+
+
+
+class Camera():
+    def __init__(self, path:any=0, width:int = None, height:int = None ) -> None:
+
+        self.camera = cv2.VideoCapture(path)
+
+        if width is None or height is None:     
+            self.width = int(self.camera.get(cv2.CAP_PROP_FRAME_WIDTH))
+            self.height = int(self.camera.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        else:
+            self.width = int(width)
+            self.height = int(height)
+
         hand_gesture_learn_list = [ 32.647995,27.334458,18.777239,32.558145,149.876268,29.578624,37.800344,133.458050,45.085468,32.342115,142.727088,37.366495,26.056262,139.415512,40.519754,0.000000,
         45.166793,26.117019,18.645196,31.567098,138.965945,20.022370,33.176819,132.806630,21.381263,28.201580,138.854737,14.808465,26.329570,128.394781,23.400235,0.000000,
         20.826588,35.926397,39.943409,20.257126,88.651968,29.781060,17.812546,102.683664,16.751548,11.247996,103.264677,18.000063,15.584646,82.515342,23.045704,0.000000,
@@ -418,99 +499,15 @@ class Hand():
 
         file = np.reshape(hand_gesture_learn_list, (110,16))
         
-        angle = file[:,:-1].astype(np.float32)
+        hand_angle_data = file[:,:-1].astype(np.float32)
         label = file[:, -1].astype(np.float32)
         knn = cv2.ml.KNearest_create()
-        knn.train(angle, cv2.ml.ROW_SAMPLE, label)
+        knn.train(hand_angle_data, cv2.ml.ROW_SAMPLE, label)
 
-        # Compute angles between joints
-        v1 = self.joint[[0,1,2,3,0,5,6,7,0,9,10,11,0,13,14,15,0,17,18,19],:] # Parent joint
-        v2 = self.joint[[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20],:] # Child joint
-        v = v2 - v1 # [20,3]
-        # Normalize v
-        v = v / np.linalg.norm(v, axis=1)[:, np.newaxis]
+        self.hand_angle_data = hand_angle_data
+        self.hand_knn = knn
 
-        # Get angle using arcos of dot product
-        angle = np.arccos(np.einsum('nt,nt->n',
-            v[[0,1,2,4,5,6,8,9,10,12,13,14,16,17,18],:], 
-            v[[1,2,3,5,6,7,9,10,11,13,14,15,17,18,19],:])) # [15,]
-
-        angle = np.degrees(angle) # Convert radian to degree
-
-        # Inference gesture
-        data = np.array([angle], dtype=np.float32)
-        ret, results, neighbours, dist = knn.findNearest(data, 3)
-        idx = int(results[0][0])
-
-        # Draw gesture result
-        # if idx in rps_gesture.keys():
-        #     cv2.putText(self.frame, text=rps_gesture[idx].upper(), org=(int(self.hand_landmarks.landmark[0].x * self.frame.shape[1]), int(self.hand_landmarks.landmark[0].y * self.frame.shape[0] + 20)),
-        #                 fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=(255, 255, 255), thickness=2)
-
-        # Other gestures
-        # cv2.putText(self.frame, text=gesture[idx].upper(), org=(int(self.hand_landmarks.landmark[0].x * self.frame.shape[1]), int(self.hand_landmarks.landmark[0].y * self.frame.shape[0] + 20)), fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=(255, 255, 255), thickness=2)
-
-        text = self.gesture_dict[idx].lower()
-
-        return text
-
-class Fingers():
-    def __init__(self, landmark_list, tipIds):
-        self.landmark_list = landmark_list
-        self.tipIds = tipIds
-
-    def is_thumb_up(self):
-        return self.landmark_list[self.tipIds[0]][1] < self.landmark_list[self.tipIds[0] - 2][1]
-
-    def is_index_up(self):
-        return self.landmark_list[self.tipIds[1]][1] < self.landmark_list[self.tipIds[1] - 2][1]
-
-    def is_middle_up(self):
-        return self.landmark_list[self.tipIds[2]][1] < self.landmark_list[self.tipIds[2] - 2][1]
-
-    def is_ring_up(self):
-        return self.landmark_list[self.tipIds[3]][1] < self.landmark_list[self.tipIds[3] - 2][1]
-
-    def is_pinky_up(self):
-        return self.landmark_list[self.tipIds[4]][1] < self.landmark_list[self.tipIds[4] - 2][1]
-
-    def is_up(self):
-        is_up_list = [ self.is_thumb_up(), self.is_index_up(), self.is_middle_up(), self.is_ring_up(), self.is_pinky_up() ]
-        return_list = []
-        for i in is_up_list:
-            if i is True:
-                return_list.append("up")
-            else:
-                return_list.append("down")
-
-        return return_list
-
-    def get_distance(self, tipId1, tipId2):
-
-        tipId1 = tipId1 * 4
-        tipId2 = tipId2 * 4
-
-        x1, y1 = self.landmark_list[tipId1]
-        x2, y2 = self.landmark_list[tipId2]
-
-        distance = math.hypot(x2 - x1, y2 - y1)
-
-        return distance
-
-
-
-
-class Camera():
-    def __init__(self, path:any=0, width:int = None, height:int = None ) -> None:
-
-        self.camera = cv2.VideoCapture(path)
-
-        if width is None or height is None:     
-            self.width = int(self.camera.get(cv2.CAP_PROP_FRAME_WIDTH))
-            self.height = int(self.camera.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        else:
-            self.width = int(width)
-            self.height = int(height)
+        print("Webcam이 시작되었습니다. 현재 window의 가로는 {} pixel, 세로는{} pixel입니다.".format( self.width, self.height))
 
     def is_opened(self, close_key: int or str = 27) -> bool:
         if not self.camera.isOpened():
@@ -523,7 +520,6 @@ class Camera():
 
         if len(str(close_key)) == 1:
             close_key = ord(close_key)
-            print(close_key)
             if cv2.waitKey(20) & 0xFF == close_key:
                 return False
         else:
@@ -546,6 +542,8 @@ class Camera():
 
     def show(self, frame, window_name = "Window"):
         return cv2.imshow(window_name, frame)
+
+    ### draw face
 
     def draw_faces(self, faces):
         for face in faces:
@@ -592,12 +590,14 @@ class Camera():
             self.frame = cv2.circle( self.frame, ( round(face.right_iris.center_x) , round(face.right_iris.center_y) ),
                                 round( min( [face.left_iris.width, face.left_iris.height] ) * 0.5 ), (0,255,0), 2 )
 
-    def write_direction(self, faces):
+    def show_direction(self, faces):
         for face in faces:
             # self.frame = cv2.putText(self.frame, face.head_pose.text, (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 2)
 
             self.frame = cv2.putText(self.frame, face.head_pose.text, org=(int(face.x1), int(face.y1 - 15)),
                 fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=(0, 255, 0), thickness=2)
+
+    ### draw_hand
 
     def draw_hands(self, hands):
         thumb_list = [0,1,2,3,4]
@@ -618,8 +618,7 @@ class Camera():
             for i in range(21):
                 self.frame = cv2.circle(self.frame, (hand.landmark_list[i][0] , hand.landmark_list[i][1]), 4, (255, 0, 255), cv2.FILLED)
 
-    def write_shape(self, hands):
-
+    def show_gesture(self, hands):
         for hand in hands:
             
             text = hand.detect_gesture()
@@ -629,8 +628,7 @@ class Camera():
                 self.frame = cv2.putText(self.frame, text.lower(), org=(int(hand.landmark_list[0][0]), int(hand.landmark_list[0][1] + 25)),
                             fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=(255, 255, 255), thickness=2)
     
-
-    def write_hand_distance(self, hands):
+    def show_distance(self, hands):
         for hand in hands:
             x,y,w,h = hand.bbox
             distanceCM = hand.get_distance()
@@ -639,12 +637,15 @@ class Camera():
                             fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=(255, 255, 255), thickness=2)
 
 
-    def detect_face(self, frame, max_num_face = 1 , draw_face = True, draw_lips = True, draw_eyes = True, draw_irides = True,
-                        write_direction = True) -> object or None:
+    ### detect face
+
+    def detect_face(self, frame, draw_face = True, draw_lips = True, draw_eyes = True, draw_irides = True,
+                        show_direction = True) -> object or None:
 
         mp_face_mesh = mp.solutions.face_mesh
 
         face = []
+        max_num_face = 1
 
         with mp_face_mesh.FaceMesh(
             max_num_faces=max_num_face,
@@ -671,8 +672,8 @@ class Camera():
             self.draw_eyes(face)
         if draw_irides:
             self.draw_irides(face)
-        if write_direction:
-            self.write_direction(face)
+        if show_direction:
+            self.show_direction(face)
 
         if len(face) == 1 and max_num_face == 1:
             return face[0]
@@ -680,7 +681,7 @@ class Camera():
         return None
 
     def detect_faces(self, frame, max_num_faces = 99, draw_faces =True, draw_lips = True, draw_eyes = True, draw_irides = True,
-                    write_direction = True) -> list:
+                    show_direction = True) -> list:
  
         mp_face_mesh = mp.solutions.face_mesh  
 
@@ -711,15 +712,17 @@ class Camera():
             self.draw_eyes(faces)
         if draw_irides:
             self.draw_irides(faces)
-        if write_direction:
-            self.write_direction(faces)
+        if show_direction:
+            self.show_direction(faces)
 
         return faces
 
-    def detect_hand(self, frame, max_num_hand = 1, draw_hand = True, write_shape = False, write_hand_distance = False):
+    ### detect_hand
+    def detect_hand(self, frame, draw_hand = True, show_gesture = False, show_distance = False):
         mp_hands = mp.solutions.hands
 
         hand = []
+        max_num_hand = 1
 
         with mp_hands.Hands(
             max_num_hands=max_num_hand,
@@ -736,21 +739,21 @@ class Camera():
 
                 if results.multi_hand_landmarks:
                     for hand_landmarks in results.multi_hand_landmarks:
-                        hand.append( Hand(hand_landmarks, frame) )
+                        hand.append( Hand(hand_landmarks, frame, self.hand_angle_data, self.hand_knn) )
 
         if draw_hand:
             self.draw_hands(hand)
-        if write_shape:
-            self.write_shape(hand)
-        if write_hand_distance:
-            self.write_hand_distance(hand)
+        if show_gesture:
+            self.show_gesture(hand)
+        if show_distance:
+            self.show_distance(hand)
 
         if len(hand) == 1 and max_num_hand == 1:
             return hand[0]
 
         return None
 
-    def detect_hands(self, frame, max_num_hands = 99, draw_hands = True, write_shape = False, write_hand_distance = False):
+    def detect_hands(self, frame, max_num_hands = 99, draw_hands = True, show_gesture = False, show_distance = False):
         mp_hands = mp.solutions.hands
 
         hands = []
@@ -770,14 +773,14 @@ class Camera():
 
                 if results.multi_hand_landmarks:
                     for hand_landmarks in results.multi_hand_landmarks:
-                        hands.append( Hand(hand_landmarks, frame) )
+                        hands.append( Hand(hand_landmarks, frame, self.hand_angle_data,self.hand_knn) )
 
         if draw_hands:
             self.draw_hands(hands)
-        if write_shape:
-            self.write_shape(hands)
-        if write_hand_distance:
-            self.write_hand_distance(hands)
+        if show_gesture:
+            self.show_gesture(hands)
+        if show_distance:
+            self.show_distance(hands)
 
         return hands
 
