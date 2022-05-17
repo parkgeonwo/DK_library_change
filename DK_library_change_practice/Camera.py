@@ -372,6 +372,20 @@ class Fingers():
         return distance
 
 
+class Body():
+    def __init__(self, pose_landmarks, frame_width, frame_height):
+
+        self.pose_landmarks = pose_landmarks
+        self.frame_width, self.frame_height = frame_width, frame_height
+
+        self.landmark_list = []
+
+        for id, lm in enumerate(self.pose_landmarks.landmark):
+            x, y = int(lm.x * self.frame_width), int(lm.y * self.frame_height)
+            self.landmark_list.append([x, y])
+        
+
+
 
 
 class Camera():
@@ -636,6 +650,30 @@ class Camera():
             self.frame = cv2.putText(self.frame, text= f'{int(distanceCM)} cm', org=(int(x+5), int(y-10)),
                             fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=(255, 255, 255), thickness=2)
 
+    ### draw body
+
+    def draw_body(self, body):
+        face_upper_list = [8,6,5,4,0,1,2,3,7]
+        face_lower_list = [10,9]
+        hand_list = [18,16,14,12,11,13,15,17]
+        left_finger_list = [18,20,16,22]
+        right_finger_list = [17,19,15,21]
+        body_list = [12,24,23,11]
+        left_leg = [24,26,28,30,32,28]
+        right_leg = [23,25,27,29,31,27]
+
+        temp_list = [ face_upper_list, face_lower_list, hand_list, left_finger_list, right_finger_list, body_list, left_leg, right_leg ]
+
+        for body in body:
+            for j in range(len(temp_list)):
+                for i in range(len(temp_list[j])-1):
+                    self.frame = cv2.line( self.frame, ( body.landmark_list[temp_list[j][i]][0] , body.landmark_list[temp_list[j][i]][1] ),
+                                        ( body.landmark_list[temp_list[j][i+1]][0] , body.landmark_list[temp_list[j][i+1]][1] ), (0,255,0), 3 )
+
+            for i in range(33):
+                self.frame = cv2.circle(self.frame, (body.landmark_list[i][0] , body.landmark_list[i][1]), 4, (255, 0, 255), cv2.FILLED)
+
+
 
     ### detect face
 
@@ -784,4 +822,32 @@ class Camera():
 
         return hands
 
+
+    def detect_body(self, frame, draw_body = True):
+        mp_pose = mp.solutions.pose
+
+        body = []
+
+        with mp_pose.Pose(
+            model_complexity=0,
+            min_detection_confidence=0.5,
+            min_tracking_confidence=0.5) as pose:
+
+                frame.flags.writeable = False
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                results = pose.process(frame)
+
+                frame.flags.writeable = True
+                frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+
+                if results.pose_landmarks:
+                    body.append( Body(results.pose_landmarks, self.width, self.height) )
+
+        if draw_body:
+            self.draw_body(body)
+
+        if len(body) == 1:
+            return body[0]
+
+        return None
 
