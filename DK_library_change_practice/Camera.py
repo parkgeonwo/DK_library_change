@@ -2,6 +2,7 @@ import cv2
 import mediapipe as mp
 import numpy as np
 import math
+import time
 
 class Face():
     def __init__(self, face_landmarks, frame):
@@ -400,6 +401,38 @@ class Camera():
             self.width = int(width)
             self.height = int(height)
 
+        print("Webcam/Video가 시작되었습니다. 현재 Window의 가로는 {} pixel, 세로는 {} pixel입니다.".format( self.width, self.height))
+
+        self.hand_angle_data, self.hand_knn = self.hand_knn_learn()
+
+        self.mp_pose_single = self.mediapipe_pose()
+        self.mp_hand_single = self.meidapipe_hand()
+        self.mp_face_single = self.meidapipe_face()
+
+    def mediapipe_pose(self):
+        mp_pose = mp.solutions.pose
+        pose = mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5)
+        return pose
+
+    def meidapipe_hand(self):
+        mp_hands = mp.solutions.hands
+        mp_hand_single = mp_hands.Hands(
+            max_num_hands=1,
+            model_complexity=0,
+            min_detection_confidence=0.6,
+            min_tracking_confidence=0.5)
+        return mp_hand_single
+
+    def meidapipe_face(self):
+        mp_face_mesh = mp.solutions.face_mesh
+        mp_face_single = mp_face_mesh.FaceMesh(
+            max_num_faces=1,
+            refine_landmarks=True,
+            min_detection_confidence=0.4, 
+            min_tracking_confidence=0.5)
+        return mp_face_single
+
+    def hand_knn_learn(self):
         hand_gesture_learn_list = [ 32.647995,27.334458,18.777239,32.558145,149.876268,29.578624,37.800344,133.458050,45.085468,32.342115,142.727088,37.366495,26.056262,139.415512,40.519754,0.000000,
         45.166793,26.117019,18.645196,31.567098,138.965945,20.022370,33.176819,132.806630,21.381263,28.201580,138.854737,14.808465,26.329570,128.394781,23.400235,0.000000,
         20.826588,35.926397,39.943409,20.257126,88.651968,29.781060,17.812546,102.683664,16.751548,11.247996,103.264677,18.000063,15.584646,82.515342,23.045704,0.000000,
@@ -518,10 +551,8 @@ class Camera():
         knn = cv2.ml.KNearest_create()
         knn.train(hand_angle_data, cv2.ml.ROW_SAMPLE, label)
 
-        self.hand_angle_data = hand_angle_data
-        self.hand_knn = knn
+        return hand_angle_data, knn
 
-        print("Webcam이 시작되었습니다. 현재 window의 가로는 {} pixel, 세로는{} pixel입니다.".format( self.width, self.height))
 
     def is_opened(self, close_key: int or str = 27) -> bool:
         if not self.camera.isOpened():
@@ -549,8 +580,6 @@ class Camera():
 
         if mirror_mode is True:
             self.frame = cv2.flip(self.frame, 1)
-        elif mirror_mode is False:
-            pass
 
         return self.frame
 
@@ -680,27 +709,30 @@ class Camera():
     def detect_face(self, frame, draw_face = True, draw_lips = True, draw_eyes = True, draw_irides = True,
                         show_direction = True) -> object or None:
 
-        mp_face_mesh = mp.solutions.face_mesh
+        # mp_face_mesh = mp.solutions.face_mesh
+
+        # face = []
+        # max_num_face = 1
+
+        # with mp_face_mesh.FaceMesh(
+        #     max_num_faces=max_num_face,
+        #     refine_landmarks=True,
+        #     min_detection_confidence=0.4, 
+        #     min_tracking_confidence=0.5) as face_mesh:
 
         face = []
         max_num_face = 1
 
-        with mp_face_mesh.FaceMesh(
-            max_num_faces=max_num_face,
-            refine_landmarks=True,
-            min_detection_confidence=0.4, 
-            min_tracking_confidence=0.5) as face_mesh:
+        frame.flags.writeable = False
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        results = self.mp_face_single.process(frame)
 
-                frame.flags.writeable = False
-                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                results = face_mesh.process(frame)
+        frame.flags.writeable = True
+        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
 
-                frame.flags.writeable = True
-                frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-
-                if results.multi_face_landmarks:
-                    for face_landmarks in results.multi_face_landmarks:  
-                        face.append( Face(face_landmarks, frame) )
+        if results.multi_face_landmarks:
+            for face_landmarks in results.multi_face_landmarks:  
+                face.append( Face(face_landmarks, frame) )
 
         if draw_face:
             self.draw_faces(face)
@@ -762,22 +794,22 @@ class Camera():
         hand = []
         max_num_hand = 1
 
-        with mp_hands.Hands(
-            max_num_hands=max_num_hand,
-            model_complexity=0,
-            min_detection_confidence=0.6,
-            min_tracking_confidence=0.5) as detect_hands:
+        # with mp_hands.Hands(
+        #     max_num_hands=max_num_hand,
+        #     model_complexity=0,
+        #     min_detection_confidence=0.6,
+        #     min_tracking_confidence=0.5) as detect_hands:
 
-                frame.flags.writeable = False
-                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                results = detect_hands.process(frame)
+        frame.flags.writeable = False
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        results = self.mp_hand_single.process(frame)
 
-                frame.flags.writeable = True
-                frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+        frame.flags.writeable = True
+        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
 
-                if results.multi_hand_landmarks:
-                    for hand_landmarks in results.multi_hand_landmarks:
-                        hand.append( Hand(hand_landmarks, frame, self.hand_angle_data, self.hand_knn) )
+        if results.multi_hand_landmarks:
+            for hand_landmarks in results.multi_hand_landmarks:
+                hand.append( Hand(hand_landmarks, frame, self.hand_angle_data, self.hand_knn) )
 
         if draw_hand:
             self.draw_hands(hand)
@@ -795,6 +827,8 @@ class Camera():
         mp_hands = mp.solutions.hands
 
         hands = []
+
+        self.num = max_num_hands
 
         with mp_hands.Hands(
             max_num_hands=max_num_hands,
@@ -824,24 +858,37 @@ class Camera():
 
 
     def detect_body(self, frame, draw_body = True):
-        mp_pose = mp.solutions.pose
-
         body = []
 
-        with mp_pose.Pose(
-            model_complexity=0,
-            min_detection_confidence=0.5,
-            min_tracking_confidence=0.5) as pose:
+        # with mp_pose.Pose(
+        #     model_complexity=0,
+        #     min_detection_confidence=0.5,
+        #     min_tracking_confidence=0.5) as pose:
 
-                frame.flags.writeable = False
-                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                results = pose.process(frame)
+        #         frame.flags.writeable = False
+        #         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        #         results = pose.process(frame) 
 
-                frame.flags.writeable = True
-                frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+        #         frame.flags.writeable = True
+        #         frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
 
-                if results.pose_landmarks:
-                    body.append( Body(results.pose_landmarks, self.width, self.height) )
+        #         if results.pose_landmarks:
+        #             body.append( Body(results.pose_landmarks, self.width, self.height) )
+
+        # pose = mp_pose.Pose(
+        #     model_complexity=0,
+        #     min_detection_confidence=0.5,
+        #     min_tracking_confidence=0.5)
+
+        frame.flags.writeable = False
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        results = self.mp_pose_single.process(frame) 
+
+        frame.flags.writeable = True
+        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+
+        if results.pose_landmarks:
+            body.append( Body(results.pose_landmarks, self.width, self.height) )
 
         if draw_body:
             self.draw_body(body)
@@ -850,4 +897,5 @@ class Camera():
             return body[0]
 
         return None
+
 
