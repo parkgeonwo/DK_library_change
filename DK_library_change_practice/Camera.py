@@ -385,8 +385,58 @@ class Body():
             x, y = int(lm.x * self.frame_width), int(lm.y * self.frame_height)
             self.landmark_list.append([x, y])
         
+        self.left_arm = Arm(self.landmark_list, self.get_angle(12,14,16))
+        self.right_arm = Arm(self.landmark_list, self.get_angle(11,13,15))
+        self.left_leg = Leg(self.landmark_list, self.get_angle(24,26,28))    
+        self.right_leg = Leg(self.landmark_list, self.get_angle(23,25,27))
+    
+    def get_angle(self,p1,p2,p3):
+        x1, y1 = self.landmark_list[p1]
+        x2, y2 = self.landmark_list[p2]
+        x3, y3 = self.landmark_list[p3]
 
+        angle = math.degrees(math.atan2(y3 - y2, x3 - x2) -math.atan2(y1 - y2, x1 - x2))
 
+        if angle < 0:
+            angle += 360
+        if angle > 180:
+            angle = 360 - angle
+        
+        return angle
+
+    def count_squat(self):
+        up = False
+        down = False
+        cnt = False
+        left_leg_angle = self.get_angle(24,26,28)
+        right_leg_angle = self.get_angle(23,25,27)
+
+        if left_leg_angle >= 160 and right_leg_angle >= 160:
+            up = True
+        if up == True and down == False and left_leg_angle <= 70 and right_leg_angle <= 70:
+            down = True
+        if up == True and down == True and left_leg_angle >= 160 and right_leg_angle >= 160:
+            up = False
+            down = False
+            cnt = True
+
+        return cnt
+
+class Arm():
+    def __init__(self, landmark_list, angle):
+        self.landmark_list = landmark_list
+        self.angle = angle
+
+    def is_fold(self):
+        return self.angle < 35
+
+class Leg():
+    def __init__(self, landmark_list, angle):
+        self.landmark_list = landmark_list
+        self.angle = angle
+
+    def is_fold(self):
+        return self.angle < 40
 
 
 class Camera():
@@ -585,6 +635,23 @@ class Camera():
 
     def show(self, frame, window_name = "Window"):
         return cv2.imshow(window_name, frame)
+
+    def show_text(self, x, y, color, text):
+        text = str(text)
+
+        if color == "green":
+            color = (0,255,0)
+        elif color == "blue":
+            color = (255,0,0)
+        elif color == "red":
+            color = (0,0,255)
+        elif color == "black":
+            color = (0,0,0)
+        elif color == "white":
+            color = (255,255,255)
+
+        self.frame = cv2.putText(self.frame, text, org=(int(x), int(y)),
+                fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=color, thickness=2)
 
     ### draw face
 
