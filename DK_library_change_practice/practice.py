@@ -16,26 +16,31 @@
 from dynamikontrol import Module
 from Camera import Camera
 # from dynamikontrol_toolkit import Camera
-import time
-import mediapipe as mp
-import cv2
 
-
-# module = Module()
-# # camera = Camera(path='/home/matrix/Desktop/code/DK_library_change/video2.mp4')
-camera = Camera()
+module = Module()
+camera = Camera(path='/home/matrix/Desktop/code/DK_library_change/squat.mp4')
+# camera = Camera()
 # pTime = 0
 
 count = 0
+position = None
 
 while camera.is_opened():
     frame = camera.get_frame()
 
     body = camera.detect_body(frame)
-    camera.show_text(50,30,"black",count)
+    camera.show_text(30,50,"blue",count)
 
     if body:
-        print(body.count_squat())
+        module.motor.angle(-60)
+        if body.is_squat() == "down":
+            position = "down"
+        if position == "down" and body.is_squat() == "up":
+            position = "up"
+            count += 1
+        if count >= 3:
+            module.motor.angle(60)
+            break
 
     # cTime = time.time()
     # fps = 1 / (cTime-pTime)
@@ -47,7 +52,9 @@ while camera.is_opened():
 
     camera.show(frame)
 
-# module.disconnect()
+module.disconnect()
+
+
 
 
 

@@ -1,3 +1,4 @@
+from calendar import c
 import cv2
 import mediapipe as mp
 import numpy as np
@@ -404,23 +405,41 @@ class Body():
         
         return angle
 
-    def count_squat(self):
-        up = False
-        down = False
-        cnt = False
+    def is_squat(self):
         left_leg_angle = self.get_angle(24,26,28)
         right_leg_angle = self.get_angle(23,25,27)
 
+        if left_leg_angle <= 130 and right_leg_angle <= 130:
+            return "down"
         if left_leg_angle >= 160 and right_leg_angle >= 160:
-            up = True
-        if up == True and down == False and left_leg_angle <= 70 and right_leg_angle <= 70:
-            down = True
-        if up == True and down == True and left_leg_angle >= 160 and right_leg_angle >= 160:
-            up = False
-            down = False
-            cnt = True
+            return "up"
 
-        return cnt
+    def is_pushup(self):
+        left_arm_angle = self.get_angle(12,14,16)
+        right_arm_angle = self.get_angle(11,13,15)
+
+        if left_arm_angle <= 70 and right_arm_angle <= 70:
+            return "down"
+        if left_arm_angle >= 150 and right_arm_angle >= 150:
+            return "up"
+
+    def is_situp(self):
+        left_hip_angle = self.get_angle(12,24,26)
+        right_hip_angle = self.get_angle(11,23,25)
+
+        if left_hip_angle >= 125 and right_hip_angle >= 125:
+            return "down"
+        if left_hip_angle <= 55 and right_hip_angle <= 55:
+            return "up"
+    
+    def is_pullup(self):
+        left_arm_angle = self.get_angle(12,14,16)
+        right_arm_angle = self.get_angle(11,13,15)
+
+        if left_arm_angle >= 150 and right_arm_angle >= 150:
+            return "down"
+        if left_arm_angle <= 60 and right_arm_angle <= 60:
+            return "up"
 
 class Arm():
     def __init__(self, landmark_list, angle):
@@ -651,7 +670,7 @@ class Camera():
             color = (255,255,255)
 
         self.frame = cv2.putText(self.frame, text, org=(int(x), int(y)),
-                fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=color, thickness=2)
+                fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=color, thickness=3)
 
     ### draw face
 
