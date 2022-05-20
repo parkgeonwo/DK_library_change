@@ -1,17 +1,20 @@
 from dynamikontrol import Module
-from dynamikontrol_toolkit import Camera
+from Camera import Camera
 
 module = Module()
-camera = Camera()
+camera = Camera(path =1)
+
+module.motor.angle(60)
 
 while camera.is_opened():
     frame = camera.get_frame()
-    face = camera.detect_face(frame, draw_face=False,
-                        draw_lips=False, write_direction=False)
-    if face:
-        if face.eyes.is_look_left() or face.eyes.is_look_right():
-            module.motor.angle(-50)
-            module.motor.angle(50, period = 2)
+
+    hand = camera.detect_hand(frame)
+    if hand:
+        module.motor.angle(-60, period = 1.5)
+    else:
+        module.motor.angle(60, period = 1.5)
+    
     camera.show(frame)
 
 
