@@ -1,9 +1,7 @@
-from calendar import c
 import cv2
 import mediapipe as mp
 import numpy as np
 import math
-import time
 
 class Face():
     def __init__(self, face_landmarks, frame):
@@ -43,9 +41,11 @@ class Face():
         self.lips_width = self.lips_right - self.lips_left
         self.lips_height = abs( self.lips_upper - self.lips_lower )
 
+        self.lips_angle = self.get_angle(13,62,14)
+
         self.lips = Lips( x1 = self.lips_left, y1 = self.lips_upper,
                         width = self.lips_width, height = self.lips_height,
-                        face_width = self.width, face_height = self.height )
+                        angle = self.lips_angle )
 
         lipsUpper_list = [61, 185, 40, 39, 37, 0, 267, 269, 270, 409, 291, 308, 415, 310, 311, 312, 13, 82, 81, 80, 191, 78]
         lipsLower_list = [61, 146, 91, 181, 84, 17, 314, 405, 321, 375, 291, 308, 324, 318, 402, 317, 14, 87, 178, 88, 95, 78]
@@ -116,6 +116,13 @@ class Face():
         self.head_pose = head_pose_estimation(self.frame_width, self.frame_height, self.face_landmarks)
         self.direction = self.head_pose.text
 
+    def get_angle(self,p1,p2,p3):
+        get_angle = Get_angle_class(self.landmark_list)
+        return get_angle.angle(p1,p2,p3) 
+    def get_distance(self,p1,p2):
+        get_distance = Get_distance_class(self.landmark_list)
+        return get_distance.distance(p1,p2) 
+
     def is_located_left(self):
         return self.center_x <= 0.4 * self.frame_width
     def is_located_right(self):
@@ -129,7 +136,7 @@ class Face():
         return 'center_x: %.3f, center_y: %.3f, width: %.3f, height: %.3f' % (self.center_x, self.center_y, self.width, self.height)
 
 class Lips():
-    def __init__(self,x1,y1,width,height,face_width,face_height):
+    def __init__(self,x1,y1,width,height, angle):
         self.x1 = x1
         self.y1 = y1
         self.width = width
@@ -138,10 +145,9 @@ class Lips():
         self.y2 = self.y1 + height
         self.center_x = (self.x1 + self.x2) / 2
         self.center_y = (self.y1 + self.y2) / 2
-        self.face_width = face_width
-        self.face_height = face_height
-    def is_opened(self, ratio = 0.3):
-        return (self.height) >= (self.face_width*ratio)
+        self.angle = angle
+    def is_opened(self, angle = 80):
+        return self.angle >= angle
     def __repr__(self):
         return 'center_x: %.3f, center_y: %.3f, width: %.3f, height: %.3f' % (self.center_x, self.center_y, self.width, self.height)
 
@@ -291,7 +297,15 @@ class Hand():
 
             self.fingers = Fingers(landmark_list= self.landmark_list, tipIds = self.tipIds)
 
-    def get_distance(self):
+    def get_angle(self,p1,p2,p3):
+        get_angle = Get_angle_class(self.landmark_list)
+        return get_angle.angle(p1,p2,p3) 
+
+    def get_distance(self,p1,p2):
+        get_distance = Get_distance_class(self.landmark_list)
+        return get_distance.distance(p1,p2) 
+
+    def get_webcam_distance(self):
         # x is the raw distance , y is the value in cm
         x = [300, 245, 200, 170, 145, 130, 112, 103, 93, 87, 80, 75, 70, 67, 62, 59, 57]
         y = [20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100]
@@ -388,22 +402,15 @@ class Body():
         
         self.left_arm = Arm(self.landmark_list, self.get_angle(12,14,16))
         self.right_arm = Arm(self.landmark_list, self.get_angle(11,13,15))
-        self.left_leg = Leg(self.landmark_list, self.get_angle(24,26,28))    
+        self.left_leg = Leg(self.landmark_list, self.get_angle(24,26,28))
         self.right_leg = Leg(self.landmark_list, self.get_angle(23,25,27))
-    
+
     def get_angle(self,p1,p2,p3):
-        x1, y1 = self.landmark_list[p1]
-        x2, y2 = self.landmark_list[p2]
-        x3, y3 = self.landmark_list[p3]
-
-        angle = math.degrees(math.atan2(y3 - y2, x3 - x2) -math.atan2(y1 - y2, x1 - x2))
-
-        if angle < 0:
-            angle += 360
-        if angle > 180:
-            angle = 360 - angle
-        
-        return angle
+        get_angle = Get_angle_class(self.landmark_list)
+        return get_angle.angle(p1,p2,p3) 
+    def get_distance(self,p1,p2):
+        get_distance = Get_distance_class(self.landmark_list)
+        return get_distance.distance(p1,p2) 
 
     def is_squat(self):
         left_leg_angle = self.get_angle(24,26,28)
@@ -446,16 +453,47 @@ class Arm():
         self.landmark_list = landmark_list
         self.angle = angle
 
-    def is_fold(self):
-        return self.angle < 35
+    def is_fold(self,angle = 35):
+        return self.angle < angle
 
 class Leg():
     def __init__(self, landmark_list, angle):
         self.landmark_list = landmark_list
         self.angle = angle
 
-    def is_fold(self):
-        return self.angle < 40
+    def is_fold(self,angle = 40):
+        return self.angle < angle
+
+class Get_angle_class():
+    def __init__(self, landmark_list):
+        self.landmark_list = landmark_list
+
+    def angle(self,p1,p2,p3):
+        x1, y1 = self.landmark_list[p1]
+        x2, y2 = self.landmark_list[p2]
+        x3, y3 = self.landmark_list[p3]
+
+        angle = math.degrees(math.atan2(y3 - y2, x3 - x2) -math.atan2(y1 - y2, x1 - x2))
+
+        if angle < 0:
+            angle += 360
+        if angle > 180:
+            angle = 360 - angle
+
+        return angle
+
+class Get_distance_class():
+    def __init__(self,landmark_list):
+        self.landmark_list = landmark_list
+
+    def distance(self, p1, p2):
+
+        x1, y1 = self.landmark_list[p1]
+        x2, y2 = self.landmark_list[p2]
+
+        distance = math.hypot(x2 - x1, y2 - y1)
+
+        return distance
 
 
 class Camera():
@@ -622,7 +660,6 @@ class Camera():
 
         return hand_angle_data, knn
 
-
     def is_opened(self, close_key: int or str = 27) -> bool:
         if not self.camera.isOpened():
             return False
@@ -655,7 +692,27 @@ class Camera():
     def show(self, frame, window_name = "Window"):
         return cv2.imshow(window_name, frame)
 
-    def show_text(self, x, y, color, text):
+    def get_angle(self,p1,p2,p3):
+        x1, y1 = p1
+        x2, y2 = p2
+        x3, y3 = p3
+        angle = math.degrees(math.atan2(y3 - y2, x3 - x2) -math.atan2(y1 - y2, x1 - x2))
+
+        if angle < 0:
+            angle += 360
+        if angle > 180:
+            angle = 360 - angle
+
+        return angle
+
+    def get_distance(self, p1, p2):
+        x1, y1 = p1
+        x2, y2 = p2
+        distance = math.hypot(x2 - x1, y2 - y1)
+
+        return distance
+
+    def show_text(self, x = 30, y = 50, font_size = 1, color = "black", text = "text"):
         text = str(text)
 
         if color == "green":
@@ -670,7 +727,7 @@ class Camera():
             color = (255,255,255)
 
         self.frame = cv2.putText(self.frame, text, org=(int(x), int(y)),
-                fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=color, thickness=3)
+                fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=font_size, color=color, thickness=3)
 
     ### draw face
 
