@@ -50,8 +50,16 @@ while cap.isOpened():
                     face_2d.append([x, y])
 
                     # Get the 3D Coordinates
-                    face_3d.append([x, y, lm.z])       
+                    face_3d.append([x, y, lm.z])
             
+            print(len(face_3d))
+            cv2.circle(image, (face_2d[0][0], face_2d[0][1]), 5,(255,0,0), 5)
+            cv2.circle(image, (face_2d[1][0], face_2d[1][1]), 5,(255,0,0), 5)
+            cv2.circle(image, (face_2d[2][0], face_2d[2][1]), 5,(255,0,0), 5)
+            cv2.circle(image, (face_2d[3][0], face_2d[3][1]), 5,(255,0,0), 5)
+            cv2.circle(image, (face_2d[4][0], face_2d[4][1]), 5,(255,0,0), 5)
+            cv2.circle(image, (face_2d[5][0], face_2d[5][1]), 5,(255,0,0), 5)
+
             # Convert it to the NumPy array
             face_2d = np.array(face_2d, dtype=np.float64)
 
@@ -108,6 +116,8 @@ while cap.isOpened():
             # cv2.putText(image, "x: " + str(np.round(x,2)), (500, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
             # cv2.putText(image, "y: " + str(np.round(y,2)), (500, 100), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
             # cv2.putText(image, "z: " + str(np.round(z,2)), (500, 150), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+
+            
 
         mp_drawing.draw_landmarks(
                     image=image,
